@@ -4,12 +4,18 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
+/// <summary>
+/// ロード画面の種類（シーンを読み込むか、ロード画面を片付けるか）
+/// </summary>
 public enum LoadState
 {
     Load,
     Unload
 }
 
+/// <summary>
+/// 非同期のシーン遷移と、それに伴うフェード・進捗バーの表示を制御するクラス
+/// </summary>
 public class LoadingController : MonoBehaviour
 {
     [SerializeField] private Canvas _loadingCanvas;
@@ -17,11 +23,15 @@ public class LoadingController : MonoBehaviour
     [SerializeField] private Slider _loadingBar;
     [SerializeField] private TextMeshProUGUI _loadingText;
 
-    // 読み込み中のシーンとその進行状況
+    // 読み込み中のシーンとその進行状況を管理するオブジェクト
     private AsyncOperation _loadingScene;
 
+    // Loadingテキストの後ろにつくドットのアニメーション用配列
     private readonly string[] _dots = new string[4] { "", ".", "..", "..." };
 
+    /// <summary>
+    /// ロード画面に使用するUIを一度すべて非表示にする
+    /// </summary>
     public void SetLoadingCanvas()
     {
         // 一度 LoadingCanvas の中身を個別で非表示
@@ -32,6 +42,9 @@ public class LoadingController : MonoBehaviour
         _loadingText.text = "Loading" + _dots[3];
     }
 
+    /// <summary>
+    /// ロード画面を開く（Load）と、ロード画面を閉じる（Unload）を渡すことで処理してくれる
+    /// </summary>
     public IEnumerator LoadScene(string sceneName, LoadState loadState)
     {
         ////////// 必要な要素がそろっているか確認する ////////

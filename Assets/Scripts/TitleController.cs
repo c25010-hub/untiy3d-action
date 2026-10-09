@@ -1,26 +1,32 @@
-﻿using UnityEngine;
-using UnityEngine.UI;
-using System.Collections;
+﻿using System.Collections;
+using System.Collections.Generic;
 using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
 
-public class TitleController : SoundController
+public class TitleController : LoadingController
 {
     [SerializeField] private Button _startButton;
     [SerializeField] private TextMeshProUGUI _startButtonText;
+
+    // BGM
+    private readonly List<AudioClip> _bgm = new List<AudioClip>();
+    // 効果音（Sound effects）
+    private readonly List<AudioClip> _se = new List<AudioClip>();
 
     private readonly float _startButtonFadeSpeed = 2.0f;
 
     private void Awake()
     {
-        // Titleシーンの初期化
-        SetTitleSceneCondition();
-
         // ロード画面の初期化
         SetLoadingCanvas();
     }
 
     void Start()
     {
+        // Titleシーンで使う音声を読み込む
+        LoadAudio();
+
         // スタートボタンを点滅させる
         StartCoroutine(StartButtonFadeLoopRoutine());
     }
@@ -30,8 +36,10 @@ public class TitleController : SoundController
         
     }
 
-    // Titleシーンの状態を整える
-    private void SetTitleSceneCondition()
+    //=================================== 読み込み処理 =====================================
+
+    // Titleシーンで使う音声を読み込む
+    private void LoadAudio()
     {
 
     }
@@ -52,7 +60,7 @@ public class TitleController : SoundController
 
         while (true)
         {
-            float alpha = (Mathf.Sin(Time.time * _startButtonFadeSpeed) + 1.0f) * 0.5f;
+            float alpha = (Mathf.Sin(Time.time * _startButtonFadeSpeed) + 1.0f) * 0.25f + 0.5f;
 
             Color buttonColor = _startButton.image.color;
             Color textColor = _startButtonText.color;
@@ -71,9 +79,12 @@ public class TitleController : SoundController
 
     //=================================== ボタンインターフェース =====================================
 
-    // ゲームスタート
+    /// <summary>
+    /// ゲームスタート
+    /// </summary>
     public void GameStart()
     {
+        // フェードイン
         StartCoroutine(LoadScene("HomeScene", LoadState.Load));
     }
 }
