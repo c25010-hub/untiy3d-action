@@ -1,32 +1,46 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
-public class BossController : MonoBehaviour
+public class BossController : MonoBehaviour, IDamageable
 {
-    // ‚±‚±‚ÉƒCƒ“ƒXƒyƒNƒ^[‚©‚çã‹L‚Ìƒf[ƒ^ƒtƒ@ƒCƒ‹‚ğƒAƒ^ƒbƒ`‚·‚é
-    [SerializeField] private BossParameterSO _bossParameter;
+    //=================================== ã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹ (Maxå€¤) =====================================
+    private int _maxHp;
+    private int _maxAtk;
+    private int _maxDef;
 
-    // ŠO•”‚©‚ç’l‚ğuŒ©‚év‚±‚Æ‚¾‚¯‚ª‚Å‚«‚éƒvƒƒpƒeƒBiƒJƒvƒZƒ‹‰»j
-    public int MaxHp => _maxHp;
-    public int CurrentHp => _currentHp;
-    public int CurrentAtk => _currentAtk;
-    public int CurrentDef => _currentDef;
-    public int CurrentPhysRes => _currentPhysRes;
+    private float _maxPhysResist;  // ç‰©ç†è€æ€§
+    private float _maxEnergyResist;// ã‚¨ãƒãƒ«ã‚®ãƒ¼è€æ€§
 
-    // ƒ{ƒX‚ÌŒ»İ‚ÌƒXƒe[ƒ^ƒXãŒÀ’liŒ»İ’l‚ª‚±‚ê‚ğ’´‚¦‚Ä‘‚¦‚é‚±‚Æ‚Í‚ ‚è‚Ü‚¹‚ñj
-    private int _maxHp = 1000;     // ¶–½—ÍiHit Pointj
-    private int _maxAtk = 1000;    // UŒ‚—ÍiAttackj
-    private int _maxDef = 1000;    // –hŒä—ÍiDefensej
-    private int _maxPhysRes = 1000;// •¨—‘Ï«iPhysical Resistancej
+    private float _maxCritRate;  // 0.0ã€œ1.0ã§ç®¡ç† (0.05 = 5%)
+    private float _maxCritDamage;// 0.5 = 50%
 
-    // ƒ{ƒX‚Ì¡Œ»İ‚ÌƒXƒe[ƒ^ƒXi‰æ–Êã‚ÌHPƒo[‚Ìc‚èƒQ[ƒW‚È‚Ç‚É’¼Œ‹‚·‚é’lj
-    private int _currentHp = 1000;     // ¶–½—Í
-    private int _currentAtk = 1000;    // UŒ‚—Í
-    private int _currentDef = 1000;    // –hŒä—Í
-    private int _currentPhysRes = 1000;// •¨—‘Ï«
+    //=================================== ã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹ (ç¾åœ¨å€¤) =====================================
+    private int _currentHp;
+    private int _currentAtk;
+    private int _currentDef;
+
+    private float _currentPhysResist;  // ç‰©ç†è€æ€§
+    private float _currentEnergyResist;// ã‚¨ãƒãƒ«ã‚®ãƒ¼è€æ€§
+
+    private float _currentCritRate;
+    private float _currentCritDamage;
+
+    // å‚ç…§ç”¨ãƒ—ãƒ­ãƒ‘ãƒ†ã‚£
+
+    //=================================== ãƒ•ã‚£ãƒ¼ãƒ«ãƒ‰ =====================================
+    [SerializeField] private GameController _gameController;
+
+    private void Awake()
+    {
+        //  ãƒ‡ãƒ¼ã‚¿ã®èª­ã¿è¾¼ã¿
+        LoadBossPrefs();
+
+        // åˆæœŸã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹ã®è¨­å®š
+        SetMaxStatus();
+    }
 
     void Start()
     {
-        SetStatus();
+
     }
 
     void Update()
@@ -34,28 +48,97 @@ public class BossController : MonoBehaviour
 
     }
 
-    // ’²ß‚µ‚½ƒpƒ‰ƒ[ƒ^[‚ğƒ{ƒX‚ÌƒXƒe[ƒ^ƒX‚É”½‰f‚³‚¹‚é
-    private void SetStatus()
+    //=================================== åˆæœŸå‡¦ç† =====================================
+    // ã‚»ãƒ¼ãƒ–ãƒ‡ãƒ¼ã‚¿ã‚„ãƒã‚¹ã‚¿ãƒ¼ãƒ‡ãƒ¼ã‚¿ã‹ã‚‰ã®èª­ã¿è¾¼ã¿
+    private void LoadBossPrefs()
     {
-        if (_bossParameter == null)
-        {
-            Debug.LogError("ƒXƒNƒŠƒvƒ^ƒuƒ‹ƒIƒuƒWƒFƒNƒgiBossParameterj‚ªƒZƒbƒg‚³‚ê‚Ä‚¢‚Ü‚¹‚ñ");
-            return;
-        }
+        _maxHp = PlayerPrefs.GetInt("BossHP", 1000);
+        _maxAtk = PlayerPrefs.GetInt("BossATK", 1000);
+        _maxDef = PlayerPrefs.GetInt("BossDEF", 1000);
 
-        // ãŒÀ’l‚Ì“¯Šú
-        _maxHp = _bossParameter.baseHp;
-        _maxAtk = _bossParameter.baseAtk;
-        _maxDef = _bossParameter.baseDef;
-        _maxPhysRes = _bossParameter.basePhysRes;
+        _maxPhysResist = PlayerPrefs.GetFloat("BossPhysResist", 1.0f);
+        _maxEnergyResist = PlayerPrefs.GetFloat("BossEnergyResist", 1.0f);
 
-        // Œ»İ’l‚Ì‰Šú‰»
+        _maxCritRate = PlayerPrefs.GetFloat("BossCritRate", 0.05f);
+        _maxCritDamage = PlayerPrefs.GetFloat("BossCritDamage", 0.5f);
+    }
+
+    // ç¾åœ¨å€¤ã«Maxå€¤ã‚’æ ¼ç´
+    private void SetMaxStatus()
+    {
         _currentHp = _maxHp;
         _currentAtk = _maxAtk;
         _currentDef = _maxDef;
-        _currentPhysRes = _maxPhysRes;
 
-        // ƒƒO‚ğ1s‚É‚Ü‚Æ‚ß‚Ä‰Â“Ç«‚ğŒüã
-        Debug.Log($"[Boss¶¬] HP:{_currentHp}, ATK:{_currentAtk}, DEF:{_currentDef}, RES:{_currentPhysRes}");
+        _currentPhysResist = _maxPhysResist;
+        _currentEnergyResist = _maxEnergyResist;
+
+        _currentCritRate = _maxCritRate;
+        _currentCritDamage = _maxCritDamage;
+    }
+
+    //=================================== ã‚¤ãƒ™ãƒ³ãƒˆé–¢æ•° =====================================
+
+
+    //=================================== ãƒœã‚¹ã®åˆ¶å¾¡é–¢æ•° =====================================
+    // å‹•ä½œåˆ¶å¾¡
+    private void MoveBoss()
+    {
+
+    }
+
+    //=================================== ãƒ€ãƒ¡ãƒ¼ã‚¸è¨ˆç®—å¼ãƒ»å–å¾—å‡¦ç† =====================================
+    private int CalculateDamage(float damageMultiplier)
+    {
+        // æ”»æ’ƒåŠ› x å€ç‡ x ä¼šå¿ƒãƒ€ãƒ¡ãƒ¼ã‚¸
+        bool isCritical = Random.value <= _currentCritRate;
+        float finalDamage = _currentAtk * damageMultiplier * (isCritical ? _currentCritDamage : 1.0f);
+
+        return (int)finalDamage;
+    }
+
+    // ãƒ€ãƒ¡ãƒ¼ã‚¸ã‚’å—ã‘å–ã‚‹
+    public void TakeDamage(int damage, DamageType damageType)
+    {
+        if (_currentHp <= 0) return;
+
+        // ãƒ€ãƒ¡ãƒ¼ã‚¸ã‚¿ã‚¤ãƒ—ã«å¿œã˜ãŸè€æ€§ã‚’å–å¾—ã™ã‚‹
+        float targetResist = 0f;
+
+        if (damageType == DamageType.PhysDamage)
+        {
+            targetResist = _currentPhysResist;
+        }
+        else if (damageType == DamageType.EnergyDamage)
+        {
+            targetResist = _currentEnergyResist;
+        }
+
+        // ( å—ã‘ãŸãƒ€ãƒ¡ãƒ¼ã‚¸ - é˜²å¾¡åŠ› ) x ( 1 - è€æ€§% )
+        float baseDamage = Mathf.Max(damage - _currentDef, 1f);
+        int finalDamage = Mathf.RoundToInt(baseDamage * (1.0f - targetResist / 100.0f));
+        finalDamage = Mathf.Max(finalDamage, 1);
+
+        // HPã®å¤‰å‹•ã¨æ­»äº¡å‡¦ç†
+        _currentHp -= finalDamage;
+        _currentHp = Mathf.Max(_currentHp, 0);
+    }
+
+    //=================================== è² ã‘æ¼”å‡º =====================================
+
+
+    //=================================== å½“ãŸã‚Šåˆ¤å®šå‡¦ç† =====================================
+    public void OnTriggerEnter(Collider other)
+    {
+        if (other.gameObject.CompareTag("Player"))
+        {
+            IDamageable damageable = other.gameObject.GetComponent<IDamageable>();
+
+            if (damageable != null)
+            {
+                // ãƒ€ãƒ¡ãƒ¼ã‚¸ã‚’ä¸ãˆã‚‹
+
+            }
+        }
     }
 }

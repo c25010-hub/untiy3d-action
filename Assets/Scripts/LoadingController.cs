@@ -1,20 +1,19 @@
-using System.Collections;
+ï»¿using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
-/// ƒ[ƒh‰æ–Ê‚Ìí—ŞiƒV[ƒ“‚ğ“Ç‚İ‚Ş‚©Aƒ[ƒh‰æ–Ê‚ğ•Ğ•t‚¯‚é‚©j
+/// ãƒ­ãƒ¼ãƒ‰ç”»é¢ã®ç¨®é¡ï¼ˆã‚·ãƒ¼ãƒ³ã‚’èª­ã¿è¾¼ã‚€ã‹ã€ãƒ­ãƒ¼ãƒ‰ç”»é¢ã‚’ç‰‡ä»˜ã‘ã‚‹ã‹ï¼‰
 /// </summary>
 public enum LoadState
 {
-    Load,
-    Unload
+    Load, Unload
 }
 
 /// <summary>
-/// ”ñ“¯Šú‚ÌƒV[ƒ“‘JˆÚ‚ÆA‚»‚ê‚É”º‚¤ƒtƒF[ƒhEi’»ƒo[‚Ì•\¦‚ğ§Œä‚·‚éƒNƒ‰ƒX
+/// éåŒæœŸã®ã‚·ãƒ¼ãƒ³é·ç§»ã¨ã€ãã‚Œã«ä¼´ã†ãƒ•ã‚§ãƒ¼ãƒ‰ãƒ»é€²æ—ãƒãƒ¼ã®è¡¨ç¤ºã‚’åˆ¶å¾¡ã™ã‚‹ã‚¯ãƒ©ã‚¹
 /// </summary>
 public class LoadingController : MonoBehaviour
 {
@@ -23,18 +22,18 @@ public class LoadingController : MonoBehaviour
     [SerializeField] private Slider _loadingBar;
     [SerializeField] private TextMeshProUGUI _loadingText;
 
-    // “Ç‚İ‚İ’†‚ÌƒV[ƒ“‚Æ‚»‚Ìisó‹µ‚ğŠÇ—‚·‚éƒIƒuƒWƒFƒNƒg
+    // èª­ã¿è¾¼ã¿ä¸­ã®ã‚·ãƒ¼ãƒ³ã¨ãã®é€²è¡ŒçŠ¶æ³ã‚’ç®¡ç†ã™ã‚‹ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆ
     private AsyncOperation _loadingScene;
 
-    // LoadingƒeƒLƒXƒg‚ÌŒã‚ë‚É‚Â‚­ƒhƒbƒg‚ÌƒAƒjƒ[ƒVƒ‡ƒ“—p”z—ñ
+    // Loadingãƒ†ã‚­ã‚¹ãƒˆã®å¾Œã‚ã«ã¤ããƒ‰ãƒƒãƒˆã®ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ç”¨é…åˆ—
     private readonly string[] _dots = new string[4] { "", ".", "..", "..." };
 
     /// <summary>
-    /// ƒ[ƒh‰æ–Ê‚Ég—p‚·‚éUI‚ğˆê“x‚·‚×‚Ä”ñ•\¦‚É‚·‚é
+    /// ãƒ­ãƒ¼ãƒ‰ç”»é¢ã«ä½¿ç”¨ã™ã‚‹UIã‚’ä¸€åº¦ã™ã¹ã¦éè¡¨ç¤ºã«ã™ã‚‹
     /// </summary>
     public void SetLoadingCanvas()
     {
-        // ˆê“x LoadingCanvas ‚Ì’†g‚ğŒÂ•Ê‚Å”ñ•\¦
+        // ä¸€åº¦ LoadingCanvas ã®ä¸­èº«ã‚’å€‹åˆ¥ã§éè¡¨ç¤º
         _loadingCanvas.gameObject.SetActive(false);
         _loadingBar.gameObject.SetActive(false);
         _loadingText.gameObject.SetActive(false);
@@ -42,43 +41,51 @@ public class LoadingController : MonoBehaviour
         _loadingText.text = "Loading" + _dots[3];
     }
 
-    /// <summary>
-    /// ƒ[ƒh‰æ–Ê‚ğŠJ‚­iLoadj‚ÆAƒ[ƒh‰æ–Ê‚ğ•Â‚¶‚éiUnloadj‚ğ“n‚·‚±‚Æ‚Åˆ—‚µ‚Ä‚­‚ê‚é
-    /// </summary>
-    public IEnumerator LoadScene(string sceneName, LoadState loadState)
+    // å¿…è¦ãªã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ãŒãã‚ã£ã¦ã„ã‚‹ã‹ç¢ºèª
+    private bool IsUIElementsAssigned()
     {
-        ////////// •K—v‚È—v‘f‚ª‚»‚ë‚Á‚Ä‚¢‚é‚©Šm”F‚·‚é ////////
         if (_loadingCanvas == null)
         {
-            Debug.LogError("ƒ[ƒh‰æ–Ê‚É•K—v‚ÈƒLƒƒƒ“ƒoƒX‚ªƒZƒbƒg‚³‚ê‚Ä‚¢‚Ü‚¹‚ñ");
-            yield break;
+            Debug.LogError("ãƒ­ãƒ¼ãƒ‰ç”»é¢ã«å¿…è¦ãªã‚­ãƒ£ãƒ³ãƒã‚¹ãŒã‚»ãƒƒãƒˆã•ã‚Œã¦ã„ã¾ã›ã‚“");
+            return false;
         }
         if (_loadingBG == null)
         {
-            Debug.LogError("ƒ[ƒh‰æ–Ê‚É•K—v‚È”wŒiƒCƒ[ƒW‚ªƒZƒbƒg‚³‚ê‚Ä‚¢‚Ü‚¹‚ñ");
-            yield break;
+            Debug.LogError("ãƒ­ãƒ¼ãƒ‰ç”»é¢ã«å¿…è¦ãªèƒŒæ™¯ã‚¤ãƒ¡ãƒ¼ã‚¸ãŒã‚»ãƒƒãƒˆã•ã‚Œã¦ã„ã¾ã›ã‚“");
+            return false;
         }
         if (_loadingBar == null)
         {
-            Debug.LogError("ƒ[ƒh‰æ–Ê‚É•K—v‚ÈƒXƒ‰ƒCƒ_[‚ªƒZƒbƒg‚³‚ê‚Ä‚¢‚Ü‚¹‚ñ");
-            yield break;
+            Debug.LogError("ãƒ­ãƒ¼ãƒ‰ç”»é¢ã«å¿…è¦ãªã‚¹ãƒ©ã‚¤ãƒ€ãƒ¼ãŒã‚»ãƒƒãƒˆã•ã‚Œã¦ã„ã¾ã›ã‚“");
+            return false;
         }
         if (_loadingText == null)
         {
-            Debug.LogError("ƒ[ƒh‰æ–Ê‚É•K—v‚ÈƒeƒLƒXƒg‚ªƒZƒbƒg‚³‚ê‚Ä‚¢‚Ü‚¹‚ñ");
-            yield break;
+            Debug.LogError("ãƒ­ãƒ¼ãƒ‰ç”»é¢ã«å¿…è¦ãªãƒ†ã‚­ã‚¹ãƒˆãŒã‚»ãƒƒãƒˆã•ã‚Œã¦ã„ã¾ã›ã‚“");
+            return false;
         }
 
-        // ƒ[ƒh‰æ–Ê‚ğ•\¦
+        return true; // ã™ã¹ã¦æƒã£ã¦ã„ã‚Œã° true ã‚’è¿”ã™
+    }
+
+    /// <summary>
+    /// ãƒ­ãƒ¼ãƒ‰ç”»é¢ã‚’é–‹ãï¼ˆLoadï¼‰ã¨ã€ãƒ­ãƒ¼ãƒ‰ç”»é¢ã‚’é–‰ã˜ã‚‹ï¼ˆUnloadï¼‰ã‚’æ¸¡ã™ã“ã¨ã§å‡¦ç†ã—ã¦ãã‚Œã‚‹
+    /// </summary>
+    public IEnumerator LoadScene(string sceneName, LoadState loadState)
+    {
+        ////////// å¿…è¦ãªè¦ç´ ãŒãã‚ã£ã¦ã„ã‚‹ã‹ç¢ºèªã™ã‚‹ ////////
+        if (!IsUIElementsAssigned()) yield break;
+
+        // ãƒ­ãƒ¼ãƒ‰ç”»é¢ã‚’è¡¨ç¤º
         _loadingCanvas.gameObject.SetActive(true);
-        _loadingBG.gameObject.SetActive(true);// © ”O‚Ì‚½‚ß!
+        _loadingBG.gameObject.SetActive(true);// â† å¿µã®ãŸã‚!
 
         if (loadState == LoadState.Load)
         {
             _loadingBar.gameObject.SetActive(true);
             _loadingText.gameObject.SetActive(true);
 
-            ////////// ƒ[ƒh‰æ–Ê‚ğ•\¦ ////////
+            ////////// ãƒ­ãƒ¼ãƒ‰ç”»é¢ã‚’è¡¨ç¤º ////////
             Color color = _loadingBG.color;
             color.a = 0f;
             _loadingBG.color = color;
@@ -94,12 +101,12 @@ public class LoadingController : MonoBehaviour
                 yield return null;
             }
 
-            // ÅŒã‚ÉŠ®‘S‚É•s“§–¾i1.0j‚É‚·‚é
+            // æœ€å¾Œã«å®Œå…¨ã«ä¸é€æ˜ï¼ˆ1.0ï¼‰ã«ã™ã‚‹
             color = _loadingBG.color;
             color.a = 1.0f;
             _loadingBG.color = color;
 
-            ////////// ƒ[ƒhŠJn ////////
+            ////////// ãƒ­ãƒ¼ãƒ‰é–‹å§‹ ////////
             _loadingScene = SceneManager.LoadSceneAsync(sceneName);
 
             int count = 0;
@@ -115,7 +122,7 @@ public class LoadingController : MonoBehaviour
                 {
                     textTimer = 0f;
 
-                    // 0, 1, 2, 3 ‚ğãY—í‚Éƒ‹[ƒv‚³‚¹‚é
+                    // 0, 1, 2, 3 ã‚’ç¶ºéº—ã«ãƒ«ãƒ¼ãƒ—ã•ã›ã‚‹
                     count = (count + 1) % 4;
                     _loadingText.text = "Loading" + _dots[count];
                 }
@@ -125,7 +132,7 @@ public class LoadingController : MonoBehaviour
         }
         else
         {
-            ////////// ƒ[ƒh‰æ–Ê‚ğ”ñ•\¦ ////////
+            ////////// ãƒ­ãƒ¼ãƒ‰ç”»é¢ã‚’éè¡¨ç¤º ////////
             Color color = _loadingBG.color;
             color.a = 1f;
             _loadingBG.color = color;
@@ -141,12 +148,12 @@ public class LoadingController : MonoBehaviour
                 yield return null;
             }
 
-            // ÅŒã‚ÉŠ®‘S‚É•s“§–¾(0.0)‚É‚·‚é
+            // æœ€å¾Œã«å®Œå…¨ã«ä¸é€æ˜(0.0)ã«ã™ã‚‹
             color = _loadingBG.color;
             color.a = 0.0f;
             _loadingBG.color = color;
 
-            // ƒ[ƒh‰æ–Ê‚ğ”ñ•\¦
+            // ãƒ­ãƒ¼ãƒ‰ç”»é¢ã‚’éè¡¨ç¤º
             _loadingCanvas.gameObject.SetActive(false);
         }
     }

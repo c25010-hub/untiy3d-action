@@ -6,15 +6,14 @@ using UnityEngine.UI;
 
 public class TitleController : LoadingController
 {
-    [SerializeField] private Button _startButton;
-    [SerializeField] private TextMeshProUGUI _startButtonText;
-
+    //=================================== フィールド =====================================
     // BGM
     private readonly List<AudioClip> _bgm = new List<AudioClip>();
     // 効果音（Sound effects）
     private readonly List<AudioClip> _se = new List<AudioClip>();
 
-    private readonly float _startButtonFadeSpeed = 2.0f;
+    [SerializeField] private Button _startButton;
+    [SerializeField] private TextMeshProUGUI _startButtonText;
 
     private void Awake()
     {
@@ -28,16 +27,10 @@ public class TitleController : LoadingController
         LoadAudio();
 
         // スタートボタンを点滅させる
-        StartCoroutine(StartButtonFadeLoopRoutine());
+        StartCoroutine(StartButtonFadeLoop());
     }
 
-    void Update()
-    {
-        
-    }
-
-    //=================================== 読み込み処理 =====================================
-
+    //=================================== 初期処理 =====================================
     // Titleシーンで使う音声を読み込む
     private void LoadAudio()
     {
@@ -45,8 +38,10 @@ public class TitleController : LoadingController
     }
 
     // スタートボタンを点滅させる
-    private IEnumerator StartButtonFadeLoopRoutine()
+    private IEnumerator StartButtonFadeLoop()
     {
+        float startButtonFadeSpeed = 2.0f;
+
         if (_startButton == null)
         {
             Debug.LogError("スタートボタンがセットされていません");
@@ -60,7 +55,7 @@ public class TitleController : LoadingController
 
         while (true)
         {
-            float alpha = (Mathf.Sin(Time.time * _startButtonFadeSpeed) + 1.0f) * 0.25f + 0.5f;
+            float alpha = (Mathf.Sin(Time.time * startButtonFadeSpeed) + 1.0f) * 0.25f + 0.5f;
 
             Color buttonColor = _startButton.image.color;
             Color textColor = _startButtonText.color;
@@ -78,13 +73,12 @@ public class TitleController : LoadingController
     }
 
     //=================================== ボタンインターフェース =====================================
-
     /// <summary>
     /// ゲームスタート
     /// </summary>
     public void GameStart()
     {
-        // フェードイン
+        // ロードシーン
         StartCoroutine(LoadScene("HomeScene", LoadState.Load));
     }
 }
