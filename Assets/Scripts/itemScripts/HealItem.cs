@@ -9,9 +9,37 @@ public enum HealType
 public class HealItem : MonoBehaviour
 {
     // 参照するデータ
-    [SerializeField] private HealDataSO _healDataSO;
+    [SerializeField] private HealDataSO _healData;
     // インスペクターでタイプを選択する
     [SerializeField] private HealType _healType;
+
+    private int _healAmount;
+
+    private void Awake()
+    {
+        if (_healData == null)
+        {
+            Debug.LogError("バフデータを反映できません。", this);
+            enabled = false;
+            return;
+        }
+
+        switch (_healType)
+        {
+            case HealType.HealHp:
+                _healAmount = _healData.HpHealAmount;
+                break;
+
+            case HealType.HealEnergy:
+                _healAmount = _healData.EnergyHealAmount;
+                break;
+
+            default:
+                Debug.LogError("未対応の回復タイプです。", this);
+                enabled = false;
+                break;
+        }
+    }
 
     private void OnTriggerEnter(Collider other)
     {
@@ -19,19 +47,9 @@ public class HealItem : MonoBehaviour
         if (other.CompareTag("Player"))
         {
             // プレイヤーのステータス管理コンポーネントを取得
-            PlayerController playerController = other.GetComponent<PlayerController>();
+            if (!other.TryGetComponent<PlayerController>(out PlayerController playerController)) return;
 
-            if (playerController == null) return;
-
-            switch (_healType)
-            {
-                case HealType.HealHp:
-                    playerController.ApplyHeal(_healType, _healDataSO.HpHealAmount);
-                    break;
-                case HealType.HealEnergy:
-                    playerController.ApplyHeal(_healType, _healDataSO.EnergyHealAmount);
-                    break;
-            }
+            playerController.ApplyHeal(_healType, _healAmount);
 
             Destroy(gameObject);
         }

@@ -12,8 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 36e61167a44504b4aa7f647d39a53214, type: 3}
   m_Name: NewBuffData
   m_EditorClassIdentifier: Assembly-CSharp::BuffDataSO
-  _maxHpBuff: 0
-  _atkBuff: 0
-  _defBuff: 0
-  _critDamageBuff: 0
-  _speedUpBuff: 0
+  _atkBuffAmount: 0.5
+  _defBuffAmount: 0.5
+  _critDamageBuffAmount: 0.5
+  _speedUpBuffAmount: 0.5
+  _atkBuffDuration: 10
+  _defBuffDuration: 10
+  _critDamageBuffDuration: 10
+  _speedUpBuffDuration: 10
+  _atkBuffStackLimit: 2
+  _defBuffStackLimit: 2
+  _critDamageBuffStackLimit: 2
+  _speedUpBuffStackLimit: 2

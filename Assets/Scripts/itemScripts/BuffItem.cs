@@ -11,9 +11,55 @@ public enum BuffType
 public class BuffItem : MonoBehaviour
 {
     // 参照するデータ
-    [SerializeField] private BuffDataSO _buffDataSO;
+    [SerializeField] private BuffDataSO _buffData;
     // インスペクターでタイプを選択する
     [SerializeField] private BuffType _buffType;
+
+    private float _buffAmount;  // バフ倍率
+    private float _buffDuration;// バフ持続時間
+    private int _buffStackLimit;// バフ最大スタック数
+
+    private void Awake()
+    {
+        if (_buffData == null)
+        {
+            Debug.LogError("バフデータを反映できません。", this);
+            enabled = false;
+            return;
+        }
+
+        switch (_buffType)
+        {
+            case BuffType.AttackUp:
+                _buffAmount = _buffData.AtkBuffAmount;
+                _buffDuration = _buffData.AtkBuffDuration;
+                _buffStackLimit = _buffData.AtkBuffStackLimit;
+                break;
+
+            case BuffType.DefUp:
+                _buffAmount = _buffData.DefBuffAmount;
+                _buffDuration = _buffData.DefBuffDuration;
+                _buffStackLimit = _buffData.DefBuffStackLimit;
+                break;
+
+            case BuffType.CritDamageUp:
+                _buffAmount = _buffData.CritDamageBuffAmount;
+                _buffDuration = _buffData.CritDamageBuffDuration;
+                _buffStackLimit = _buffData.CritDamageBuffStackLimit;
+                break;
+
+            case BuffType.SpeedUp:
+                _buffAmount = _buffData.SpeedUpBuffAmount;
+                _buffDuration = _buffData.SpeedUpBuffDuration;
+                _buffStackLimit = _buffData.SpeedUpBuffStackLimit;
+                break;
+
+            default:
+                Debug.LogError("未対応のバフタイプです。", this);
+                enabled = false;
+                break;
+        }
+    }
 
     private void OnTriggerEnter(Collider other)
     {
@@ -21,25 +67,9 @@ public class BuffItem : MonoBehaviour
         if (other.CompareTag("Player"))
         {
             // プレイヤーのステータス管理コンポーネントを取得
-            PlayerController playerController = other.GetComponent<PlayerController>();
+            if (!other.TryGetComponent(out PlayerController playerController)) return;
 
-            if (playerController == null) return;
-
-            switch (_buffType)
-            {
-                case BuffType.AttackUp:
-                    playerController.ApplyBuff(_buffType, _buffDataSO.AtkBuffAmount, _buffDataSO.AtkBuffDuration, _buffDataSO.AtkBuffStackLimit);
-                    break;
-                case BuffType.DefUp:
-                    playerController.ApplyBuff(_buffType, _buffDataSO.DefBuffAmount, _buffDataSO.DefBuffDuration, _buffDataSO.DefBuffStackLimit);
-                    break;
-                case BuffType.CritDamageUp:
-                    playerController.ApplyBuff(_buffType, _buffDataSO.CritDamageBuffAmount, _buffDataSO.CritDamageBuffDuration, _buffDataSO.CritDamageBuffStackLimit);
-                    break;
-                case BuffType.SpeedUp:
-                    playerController.ApplyBuff(_buffType, _buffDataSO.SpeedUpBuffAmount, _buffDataSO.SpeedUpBuffDuration, _buffDataSO.SpeedUpBuffStackLimit);
-                    break;
-            }
+            playerController.ApplyBuff(_buffType, _buffAmount, _buffDuration, _buffStackLimit);
 
             Destroy(gameObject);
         }

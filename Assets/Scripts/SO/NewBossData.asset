@@ -12,13 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9b1880fa89bc5ea41b46eaedb28ab7b6, type: 3}
   m_Name: NewBossData
   m_EditorClassIdentifier: Assembly-CSharp::BossDataSO
-  _baseHp: 1400
-  _baseAtk: 700
-  _baseDef: 500
-  _basePhysResist: 2
-  _baseEnergyResist: 1
+  _baseHp: 3800
+  _baseAtk: 92
+  _baseDef: 32
+  _basePhysResist: 0.2
+  _baseEnergyResist: 0.1
   _baseCritRate: 0.05
   _baseCritDamage: 0.5
-  _hpMultiplier: 1.6
-  _atkMultiplier: 0.2
-  _defMultiplier: 0.6
+  _hpBaseMultiplier: 1
+  _atkBaseMultiplier: 1
+  _defBaseMultiplier: 1
+  _statusExponent: 0.6

@@ -12,20 +12,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d8103b2353985c543b86243cec0dd289, type: 3}
   m_Name: NewPlayerData
   m_EditorClassIdentifier: Assembly-CSharp::PlayerDataSO
-  _baseHp: 800
-  _baseAtk: 500
-  _baseDef: 300
+  _baseHp: 1060
+  _baseAtk: 220
+  _baseDef: 72
   _baseEnergy: 1000
   _baseStamina: 1000
-  _baseCost: 0
-  _basePhysResist: 1
-  _baseEnergyResist: 2
+  _basePhysResist: 0.1
+  _baseEnergyResist: 0.2
   _baseCritRate: 0.05
   _baseCritDamage: 0.5
-  _hpMultiplier: 0.8
-  _atkMultiplier: 0.4
-  _defMultiplier: 0.5
+  _hpBaseMultiplier: 1
+  _atkBaseMultiplier: 1
+  _defBaseMultiplier: 1
   _firstStrikeMultiplier: 0.4
   _secondStrikeMultiplier: 0.6
   _thirdStrikeMultiplier: 0.8
   _firstShotMultiplier: 0.2
+  _statusExponent: 0.5

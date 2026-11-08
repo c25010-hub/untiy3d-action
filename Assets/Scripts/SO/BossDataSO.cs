@@ -19,22 +19,33 @@ public class BossDataSO : ScriptableObject
     [SerializeField] private float _baseCritDamage;
 
     [Header("基礎倍率")]
-    [SerializeField] private float _hpMultiplier;
-    [SerializeField] private float _atkMultiplier;
-    [SerializeField] private float _defMultiplier;
+    [SerializeField] private float _hpBaseMultiplier;
+    [SerializeField] private float _atkBaseMultiplier;
+    [SerializeField] private float _defBaseMultiplier;
 
     [Header("攻撃ダメージ倍率")]
 
-    // 外部のスクリプトからはこのプロパティを通じて「読み取り専用」で安全に取得
-    public int BaseHp => _baseHp;
-    public int BaseAtk => _baseAtk;
-    public int BaseDef => _baseDef;
 
+    [Header("累乗倍率")]
+    [SerializeField] private float _statusExponent; // ステータスを累乗する値
+
+    // 外部のスクリプトからはこのプロパティを通じて「読み取り専用」で安全に取得
+    // 基礎ステータス
+    public int BaseHp => Mathf.RoundToInt(_baseHp * _hpBaseMultiplier);
+    public int BaseAtk => Mathf.RoundToInt(_baseAtk * _atkBaseMultiplier);
+    public int BaseDef => Mathf.RoundToInt(_baseDef * _defBaseMultiplier);
+
+    // 耐性
     public float BasePhysResist => _basePhysResist;    // 物理耐性
     public float BaseEnergyResist => _baseEnergyResist;// エネルギー耐性
+
+    // クリティカル
     public float BaseCritRate => _baseCritRate;
     public float BaseCritDamage => _baseCritDamage;
-    public float HpMultiplier => _hpMultiplier;
-    public float AtkMultiplier => _atkMultiplier;
-    public float DefMultiplier => _defMultiplier;
+
+    // 攻撃ダメージ倍率
+
+
+    // ステージレベル倍率
+    public float StatusExponent => _statusExponent;  // ステータスを累乗する値
 }

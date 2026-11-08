@@ -15,7 +15,7 @@ public class PlayerController : MonoBehaviour, IDamageable
     private float _maxPhysResist;  // 物理耐性
     private float _maxEnergyResist;// エネルギー耐性
 
-    private float _maxCritRate;  // 0.0〜1.0で管理 (0.05 = 5%)
+    private float _maxCritRate;  // 0.0～1.0で管理 (0.05 = 5%)
     private float _maxCritDamage;// 0.5 = 50%
 
     //=================================== ステータス (現在値) =====================================
@@ -25,13 +25,13 @@ public class PlayerController : MonoBehaviour, IDamageable
     private int _currentEnergy;
     private int _currentStamina;
 
-    private float _currentPhysResist;
-    private float _currentEnergyResist;
+    private float _currentPhysResist;  // 物理耐性
+    private float _currentEnergyResist;// エネルギー耐性
 
-    private float _currentCritRate;
-    private float _currentCritDamage;
+    private float _currentCritRate;  // 0.0～1.0で管理 (0.05 = 5%)
+    private float _currentCritDamage;// 0.5 = 50%
 
-    // 参照用プロパティ
+    //=================================== 参照用プロパティ =====================================
     public int CurrentHp => _currentHp;
     public int CurrentEnergy => _currentEnergy;
     public int CurrentStamina => _currentStamina;
@@ -48,7 +48,8 @@ public class PlayerController : MonoBehaviour, IDamageable
     [SerializeField] private Collider[] _colliders = new Collider[4];
     [SerializeField] private PlayerDataSO _playerData;
 
-    private Coroutine _rapidFireOn, _rapidFireOff, _updatePlayerHpUI, _updatePlayerEnergyUI, _updatePlayerStaminaUI;
+    private Coroutine[] _coroutines = new Coroutine[3];
+    private Coroutine _rapidFireOn, _rapidFireOff;
     private Camera _mainCamera;
     private Rigidbody _playerRb;
     private Animator _playerAnim;
@@ -81,11 +82,8 @@ public class PlayerController : MonoBehaviour, IDamageable
 
     private void Awake()
     {
-        // データの読み込み
-        LoadPlayerPrefs();
-
-        // 初期ステータスの設定
-        SetCurrentStatus();
+        // ステータスをセット
+        SetStats();
 
         // BuffType の要素数を自動で取得
         int buffTypeCount = Enum.GetValues(typeof(BuffType)).Length;
@@ -116,7 +114,7 @@ public class PlayerController : MonoBehaviour, IDamageable
         PlayerAttack();
 
         // 通常攻撃コンボ・タイマー
-        AttackRecast();
+        AttackTimer();
 
         // 銃撃が可能か確認する
         SwitchToShootingMode();
@@ -126,34 +124,43 @@ public class PlayerController : MonoBehaviour, IDamageable
     }
 
     //=================================== 初期処理 =====================================
-    // セーブデータからの読み込み処理を分離
-    private void LoadPlayerPrefs()
+    // ステータスをセット
+    private void SetStats()
     {
-        _maxHp = PlayerPrefs.GetInt("PlayerHP", 1000);
-        _maxAtk = PlayerPrefs.GetInt("PlayerATK", 1000);
-        _maxDef = PlayerPrefs.GetInt("PlayerDEF", 1000);
-        _maxEnergy = PlayerPrefs.GetInt("PlayerEnergy", 1000);
-        _maxStamina = PlayerPrefs.GetInt("PlayerStamina", 1000);
+        int _stageLevel = PlayerPrefs.GetInt("StageLevel", 10);
+        float _stageLevelMultiplier = PlayerPrefs.GetFloat("StageLevelMultiplier", 0.2f);
 
-        _maxPhysResist = PlayerPrefs.GetFloat("PlayerPhysResist", 1.0f);
-        _maxEnergyResist = PlayerPrefs.GetFloat("PlayerEnergyResist", 1.0f);
+        int _baseHp = PlayerPrefs.GetInt("PlayerBaseHp", _playerData.BaseHp);   // HP
+        int _baseAtk = PlayerPrefs.GetInt("PlayerBaseAtk", _playerData.BaseAtk);// 攻撃力
+        int _baseDef = PlayerPrefs.GetInt("PlayerBaseDef", _playerData.BaseDef);// 防御力
+        int _baseEnergy = PlayerPrefs.GetInt("PlayerBaseEnergy", _playerData.BaseEnergy);   // 最大エネルギー量
+        int _baseStamina = PlayerPrefs.GetInt("PlayerBaseStamina", _playerData.BaseStamina);// 最大スタミナ量
 
-        _maxCritRate = PlayerPrefs.GetFloat("PlayerCritRate", 0.05f);
-        _maxCritDamage = PlayerPrefs.GetFloat("PlayerCritDamage", 0.5f);
-    }
+        float _basePhysResist = PlayerPrefs.GetFloat("PlayerBasePhysResist", _playerData.BasePhysResist);      // 物理耐性
+        float _baseEnergyResist = PlayerPrefs.GetFloat("PlayerBaseEnergyResist", _playerData.BaseEnergyResist);// エネルギー耐性
+        float _baseCritRate = PlayerPrefs.GetFloat("PlayerBaseCritRate", _playerData.BaseCritRate);      // 会心率
+        float _baseCritDamage = PlayerPrefs.GetFloat("PlayerBaseCritDamage", _playerData.BaseCritDamage);// 会心ダメージ
 
-    // 現在値にMax値を格納
-    private void SetCurrentStatus()
-    {
+        // Max
+        _maxHp = _baseHp;
+        _maxAtk = _baseAtk;
+        _maxDef = _baseDef;
+        _maxEnergy = _baseEnergy;
+        _maxStamina = _baseStamina;
+
+        _maxPhysResist = _basePhysResist;
+        _maxEnergyResist = _baseEnergyResist;
+        _maxCritRate = _baseCritRate;
+        _maxCritDamage = _baseCritDamage;
+
+        // 現在値
         _currentHp = _maxHp;
         _currentAtk = _maxAtk;
         _currentDef = _maxDef;
         _currentEnergy = _maxEnergy;
         _currentStamina = _maxStamina;
-
         _currentPhysResist = _maxPhysResist;
         _currentEnergyResist = _maxEnergyResist;
-
         _currentCritRate = _maxCritRate;
         _currentCritDamage = _maxCritDamage;
     }
@@ -247,8 +254,8 @@ public class PlayerController : MonoBehaviour, IDamageable
             _currentEnergy -= _shotCost;
 
             // プレイヤーのエネルギー量をUIに反映する（GameController に通知を送る）
-            if (_updatePlayerEnergyUI != null) StopCoroutine(_updatePlayerEnergyUI);
-            _updatePlayerEnergyUI = StartCoroutine(_gameController.UpdatePlayerEnergyUI(_currentEnergy, beforeValue));
+            if (_coroutines[(int)SliderTyp.PlayerEnergySlider] != null) StopCoroutine(_coroutines[(int)SliderTyp.PlayerEnergySlider]);
+            _coroutines[(int)SliderTyp.PlayerEnergySlider] = StartCoroutine(_gameController.UpdateSlider(SliderTyp.PlayerEnergySlider, _currentEnergy, beforeValue, _maxEnergy));
         }
     }
     
@@ -261,8 +268,8 @@ public class PlayerController : MonoBehaviour, IDamageable
         Time.timeScale = 1.0f;
     }
 
-    //=================================== プレイヤーの制御関数 =====================================
-    // 動作制御
+    //=================================== プレイヤーの動作制御 =====================================
+    // 移動制御
     private void MovePlayer()
     {
         float t = Time.deltaTime;
@@ -322,7 +329,7 @@ public class PlayerController : MonoBehaviour, IDamageable
                 // 現在の速度を一度リセット
                 _playerRb.linearVelocity = Vector3.zero;
                 // 自身の前方向へ突進
-                _playerRb.AddForce(transform.forward * _playerRushSpeed * Time.deltaTime, ForceMode.VelocityChange);
+                _playerRb.AddForce(transform.forward * _playerRushSpeed, ForceMode.VelocityChange);
 
                 if (_currentStamina < 0)
                 {
@@ -330,8 +337,8 @@ public class PlayerController : MonoBehaviour, IDamageable
                 }
 
                 //プレイヤーのスタミナ量をUIに反映する
-                if (_updatePlayerStaminaUI != null) StopCoroutine(_updatePlayerStaminaUI);
-                _updatePlayerStaminaUI = StartCoroutine(_gameController.UpdatePlayerStaminaUI(_currentStamina, beforeValue));
+                if (_coroutines[(int)SliderTyp.PlayerStaminaSlider] != null) StopCoroutine(_coroutines[(int)SliderTyp.PlayerStaminaSlider]);
+                _coroutines[(int)SliderTyp.PlayerStaminaSlider] = StartCoroutine(_gameController.UpdateSlider(SliderTyp.PlayerStaminaSlider, _currentStamina, beforeValue, _maxStamina));
             }
         }
     }
@@ -352,8 +359,8 @@ public class PlayerController : MonoBehaviour, IDamageable
                 if (_currentStamina > _maxStamina) _currentStamina = _maxStamina;
 
                 //プレイヤーのスタミナ量をUIに反映する
-                if (_updatePlayerStaminaUI != null) StopCoroutine(_updatePlayerStaminaUI);
-                _updatePlayerStaminaUI = StartCoroutine(_gameController.UpdatePlayerStaminaUI(_currentStamina, beforeValue));
+                if (_coroutines[(int)SliderTyp.PlayerStaminaSlider] != null) StopCoroutine(_coroutines[(int)SliderTyp.PlayerStaminaSlider]);
+                _coroutines[(int)SliderTyp.PlayerStaminaSlider] = StartCoroutine(_gameController.UpdateSlider(SliderTyp.PlayerStaminaSlider, _currentStamina, beforeValue, _maxStamina));
             }
         }
     }
@@ -391,7 +398,7 @@ public class PlayerController : MonoBehaviour, IDamageable
     }
 
     // 攻撃のコンボ・タイマーを開始
-    private void AttackRecast()
+    private void AttackTimer()
     {
         if (_startAttackTimer)
         {
@@ -485,9 +492,9 @@ public class PlayerController : MonoBehaviour, IDamageable
     // ダメージ計算処理
     private int CalculateDamage(float damageMultiplier)
     {
-        // 攻撃力 x ( 1 + 攻撃力バフ ) x 倍率 x 会心ダメージ
+        // 攻撃力 x (1 + 攻撃力バフ) x 倍率 x (1 + 会心ダメージ) x (1+ 会心ダメージバフ)
         bool isCritical = UnityEngine.Random.value <= _currentCritRate;
-        float finalDamage = _currentAtk * (1 + Buffs[(int)BuffType.AttackUp]) * damageMultiplier * (isCritical ? _currentCritDamage * (1 + Buffs[(int)BuffType.CritDamageUp]) : 1.0f);
+        float finalDamage = _currentAtk * (1 + Buffs[(int)BuffType.AttackUp]) * damageMultiplier * (isCritical ? (1 + _currentCritDamage) * (1 + Buffs[(int)BuffType.CritDamageUp]) : 1.0f);
         return(int)finalDamage;
     }
 
@@ -511,7 +518,7 @@ public class PlayerController : MonoBehaviour, IDamageable
 
         // (受けたダメージ - 防御力 x (1 + 防御力バフ)) x (1 - 耐性%)
         float baseDamage = Mathf.Max(damage - _currentDef * (1 + Buffs[(int)BuffType.DefUp]), 1f);
-        int finalDamage = Mathf.RoundToInt(baseDamage * (1.0f - targetResist / 100.0f));
+        int finalDamage = Mathf.RoundToInt(baseDamage * (1.0f - targetResist));
         finalDamage = Mathf.Max(finalDamage, 1);
 
         int beforeValue = _currentHp;
@@ -521,8 +528,8 @@ public class PlayerController : MonoBehaviour, IDamageable
         _currentHp = Mathf.Max(_currentHp, 0);
 
         // プレイヤーの HP量を UIに反映する（GameController に通知を送る）
-        if (_updatePlayerHpUI != null) StopCoroutine(_updatePlayerHpUI);
-        _updatePlayerHpUI = StartCoroutine(_gameController.UpdatePlayerHpUI(_currentHp, beforeValue));
+        if (_coroutines[(int)SliderTyp.PlayerHpSlider] != null) StopCoroutine(_coroutines[(int)SliderTyp.PlayerHpSlider]);
+        _coroutines[(int)SliderTyp.PlayerHpSlider] = StartCoroutine(_gameController.UpdateSlider(SliderTyp.PlayerHpSlider, _currentHp, beforeValue, _maxHp));
 
         if (_currentHp == 0)
         {
@@ -544,7 +551,7 @@ public class PlayerController : MonoBehaviour, IDamageable
     // 回復を受け取る関数
     public void ApplyHeal(HealType type, int amount)
     {
-        if (_currentHp == 0) return;
+        if (_currentHp <= 0) return;
         int beforeValue;
 
         switch (type)
@@ -555,8 +562,8 @@ public class PlayerController : MonoBehaviour, IDamageable
                 _currentHp += amount;
                 if (_currentHp > _maxHp) _currentHp = _maxHp;
                 // プレイヤーの HP量を UIに反映する（GameController に通知を送る）
-                if (_updatePlayerHpUI != null) StopCoroutine(_updatePlayerHpUI);
-                _updatePlayerHpUI = StartCoroutine(_gameController.UpdatePlayerHpUI(_currentHp, beforeValue));
+                if (_coroutines[(int)SliderTyp.PlayerHpSlider] != null) StopCoroutine(_coroutines[(int)SliderTyp.PlayerHpSlider]);
+                _coroutines[(int)SliderTyp.PlayerHpSlider] = StartCoroutine(_gameController.UpdateSlider(SliderTyp.PlayerHpSlider, _currentHp, beforeValue, _maxHp));
                 break;
 
             // エネルギ補充
@@ -565,8 +572,8 @@ public class PlayerController : MonoBehaviour, IDamageable
                 _currentEnergy += amount;
                 if (_currentEnergy > _maxEnergy) _currentEnergy = _maxEnergy;
                 // プレイヤーのエネルギー量をUIに反映する（GameController に通知を送る）
-                if (_updatePlayerEnergyUI != null) StopCoroutine(_updatePlayerEnergyUI);
-                _updatePlayerEnergyUI = StartCoroutine(_gameController.UpdatePlayerEnergyUI(_currentEnergy, beforeValue));
+                if (_coroutines[(int)SliderTyp.PlayerEnergySlider] != null) StopCoroutine(_coroutines[(int)SliderTyp.PlayerEnergySlider]);
+                _coroutines[(int)SliderTyp.PlayerEnergySlider] = StartCoroutine(_gameController.UpdateSlider(SliderTyp.PlayerEnergySlider, _currentEnergy, beforeValue, _maxEnergy));
                 break;
         }
     }
@@ -637,8 +644,8 @@ public class PlayerController : MonoBehaviour, IDamageable
                 if (_currentEnergy == _maxEnergy) _switchToShootingMode = true;
 
                 // エネルギー回復量を UI に反映（GameController に通知を出す）
-                if (_updatePlayerEnergyUI != null) StopCoroutine(_updatePlayerEnergyUI);
-                _updatePlayerEnergyUI = StartCoroutine(_gameController.UpdatePlayerEnergyUI(_currentEnergy, beforeValue));
+                if (_coroutines[(int)SliderTyp.PlayerEnergySlider] != null) StopCoroutine(_coroutines[(int)SliderTyp.PlayerEnergySlider]);
+                _coroutines[(int)SliderTyp.PlayerEnergySlider] = StartCoroutine(_gameController.UpdateSlider(SliderTyp.PlayerEnergySlider, _currentEnergy, beforeValue, _maxEnergy));
             }
         }
 

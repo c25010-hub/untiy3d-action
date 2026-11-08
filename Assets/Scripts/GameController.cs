@@ -3,6 +3,15 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+public enum SliderTyp
+{
+    // NOTE: 配列（_slider）と順番を統一しろ！
+    PlayerHpSlider = 0,
+    PlayerEnergySlider = 1,
+    PlayerStaminaSlider = 2,
+    BossHpSlider = 3
+}
+
 public enum BattleResult
 {
     Win = 0,
@@ -16,22 +25,43 @@ public class GameController : LoadingController
     // 効果音（Sound effects）
     private readonly List<AudioClip> _se = new List<AudioClip>();
 
-    [SerializeField] private List<GameObject> _items = new List<GameObject>();
-    [SerializeField] private Slider _playerHpSlider, _playerEnergySlider, _playerStaminaSlider, _bossHpSlider;
+    [SerializeField] private Transform _itemsParent;
+    [SerializeField] private List<GameObject> _items = new List<GameObject>();// プレファブ化されたアイテム
+    [SerializeField] private GameObject[] _turretStands = new GameObject[2];
+    [SerializeField] private GameObject[] _turrets = new GameObject[2];
+    
+    [SerializeField] private Slider[] _slider = new Slider[4];
 
-    private float _ElapsedTime;
-    private float _playerHpValue;
-    private float _playerEnergyValue;
-    private float _playerStaminaValue;
-    private float _bossHpValue;
+    private Coroutine _generateTurretAsync;
+
+    private int _difficultyType;
+    private int _stageLevel;
+
+    private float _itemsRotateSpeed = 2f;
+    private float _itemSpawnInterval = 30;
+    private float _itemSpawnTimer;
+    private float _turretSpawnInterval = 60;
+    private float _turretSpawnTimer;
+
+    // アイテム生成可能範囲
+    [SerializeField] private Transform _minSpawnPosX;
+    [SerializeField] private Transform _maxSpawnPosX;
+
+    [SerializeField] private Transform _minSpawnPosZ;
+    [SerializeField] private Transform _maxSpawnPosZ;
+
+    private bool _gameSet = false;
 
     private void Awake()
     {
+        _difficultyType = PlayerPrefs.GetInt("DifficultyType", 0);
+        _stageLevel = PlayerPrefs.GetInt("StageLevel", 10);
+
+        // ステージに難易度を適用する
+        SetBattleScene();
+
         // ロード画面の初期化
         SetLoadingCanvas();
-
-        // 必要な要素がそろっているか確認する
-        CheckElement();
     }
 
     void Start()
@@ -41,14 +71,21 @@ public class GameController : LoadingController
 
         // Game シーンで使う音声を読み込む
         LoadAudio();
-        
+
         // マウスカーソルを非表示
         LockCursor();
+
+        // 不要なアイテムを非表示
+        HideObjects();
     }
 
     void Update()
     {
-        _ElapsedTime += Time.deltaTime;
+        // アイテム生成
+        GenerateItem();
+
+        // タレット生成
+        GenerateTurret();
     }
 
     //=================================== 初期処理 =====================================
@@ -57,14 +94,30 @@ public class GameController : LoadingController
     {
 
     }
-
-    // 必要な要素がそろっているか確認する
-    private void CheckElement()
+    
+    // ステージに難易度を適用する
+    private void SetBattleScene()
     {
-        if (_playerHpSlider == null) Debug.LogError("_playerHpSliderがセットされていません");
-        if (_playerEnergySlider == null) Debug.LogError("_playerEnergySliderがセットされていません");
-        if (_playerStaminaSlider == null) Debug.LogError("_playerStaminaSliderがセットされていません");
-        if (_bossHpSlider == null) Debug.LogError("_bossHpSliderがセットされていません");
+        // タレットスタンドにマテリアルを適用
+        if (_stageLevel > 10)
+        {
+            Material newMaterial = Resources.Load<Material>("Materials/Unit_Selection_v1");
+
+            if (newMaterial != null)
+            {
+                for (int i = 0; i < _turretStands.Length; i++)
+                {
+                    if (_turretStands[i] == null) continue;
+
+                    // マテリアルをリソースフォルダから適用
+                    if (_turretStands[i].TryGetComponent<Renderer>(out var renderer))
+                    {
+                        renderer.material = newMaterial;
+                    }
+                }
+            }
+            else Debug.LogError("リソースフォルダからマテリアルの読み込みに失敗しました。");
+        }
     }
 
     // マウスカーソルを表示
@@ -81,132 +134,152 @@ public class GameController : LoadingController
         Cursor.visible = true;
     }
 
-    //=================================== UI処理 =====================================
-    /// <summary>
-    /// プレイヤーのHP量をUIに反映する
-    /// </summary>
-    public IEnumerator UpdatePlayerHpUI(int currentValue, int beforeValue)
+    // 不要なアイテムを非表示
+    private void HideObjects()
     {
-        float duration = 0.5f;
-        float elapsedTime = 0f;
+        // アイテム生成の制限区域
+        if (_minSpawnPosX != null) _minSpawnPosX.gameObject.SetActive(false);
+        if (_maxSpawnPosX != null) _maxSpawnPosX.gameObject.SetActive(false);
+        if (_minSpawnPosZ != null) _minSpawnPosZ.gameObject.SetActive(false);
+        if (_maxSpawnPosZ != null) _maxSpawnPosZ.gameObject.SetActive(false);
 
-        float startValue = beforeValue;
-        float targetValue = currentValue;
-
-        while (elapsedTime < duration)
+        // タレット
+        foreach (GameObject turret in _turrets)
         {
-            elapsedTime += Time.deltaTime;
-            float t = elapsedTime / duration;
-
-            _playerHpValue = Mathf.Lerp(startValue, targetValue, t);
-            _playerHpSlider.value = _playerHpValue;
-            yield return null;
+            if (turret != null) turret.SetActive(false);
         }
-
-        _playerHpValue = currentValue;
-        _playerHpSlider.value = _playerHpValue;
     }
 
+    //=================================== UI反映処理 =====================================
     /// <summary>
-    /// プレイヤーのエネルギー量をUIに反映する
+    /// 状態をスライダーに反映する
     /// </summary>
-    public IEnumerator UpdatePlayerEnergyUI(int currentValue, int beforeValue)
+    public IEnumerator UpdateSlider(SliderTyp sliderTyp, int currentValue, int beforeValue, int maxValue)
     {
+        if (_slider == null) yield break;
+        int index = (int)sliderTyp;
+
+        // 配列の範囲チェック
+        if (index < 0 || index >= _slider.Length) yield break;
+        Slider slider = _slider[index];
+
+        // Sliderと最大値のチェック
+        if (!slider || maxValue <= 0) yield break;
+
         float duration = 0.5f;
         float elapsedTime = 0f;
 
-        float startValue = beforeValue;
-        float targetValue = currentValue;
+        float start = Mathf.Clamp01((float)beforeValue / maxValue);
+        float target = Mathf.Clamp01((float)currentValue / maxValue);
 
         while (elapsedTime < duration)
         {
             elapsedTime += Time.deltaTime;
-            float t = elapsedTime / duration;
 
-            _playerEnergyValue = Mathf.Lerp(startValue, targetValue, t);
-            _playerEnergySlider.value = _playerEnergyValue;
+            float t = elapsedTime / duration;
+            slider.value = Mathf.SmoothStep(start, target, t);
+
             yield return null;
         }
 
-        _playerEnergyValue = currentValue;
-        _playerEnergySlider.value = _playerEnergyValue;
-    }
-
-    /// <summary>
-    ///プレイヤーのスタミナ量をUIに反映する
-    /// </summary>
-    public IEnumerator UpdatePlayerStaminaUI(int currentValue, int beforeValue)
-    {
-        float duration = 0.5f;
-        float elapsedTime = 0f;
-
-        float startValue = beforeValue;
-        float targetValue = currentValue;
-
-        while (elapsedTime < duration)
-        {
-            elapsedTime += Time.deltaTime;
-            float t = elapsedTime / duration;
-
-            _playerStaminaValue = Mathf.Lerp(startValue, targetValue, t);
-            _playerStaminaSlider.value = _playerStaminaValue;
-            yield return null;
-        }
-
-        _playerStaminaValue = currentValue;
-        _playerStaminaSlider.value = _playerStaminaValue;
-    }
-
-    /// <summary>
-    /// ボスのHP量をUIに反映する
-    /// </summary>
-    public IEnumerator UpdateBossHpUI(int currentValue, int beforeValue)
-    {
-        float duration = 0.5f;
-        float elapsedTime = 0f;
-
-        float startValue = beforeValue;
-        float targetValue = currentValue;
-
-        while (elapsedTime < duration)
-        {
-            elapsedTime += Time.deltaTime;
-            float t = elapsedTime / duration;
-
-            _bossHpValue = Mathf.Lerp(startValue, targetValue, t);
-            _bossHpSlider.value = _bossHpValue;
-            yield return null;
-        }
-
-        _bossHpValue = currentValue;
-        _bossHpSlider.value = _bossHpValue;
+        slider.value = target;
     }
 
     //=================================== 生成処理 =====================================
     // アイテム生成
     private void GenerateItem()
     {
+        if (_gameSet == true) return;
 
+        _itemSpawnTimer += Time.deltaTime;
+        if (_itemSpawnTimer < _itemSpawnInterval) return;
+        
+        _itemSpawnTimer = 0;
+
+        if (_items == null || _items.Count == 0) return;
+
+        int itemIndex = Random.Range(0, _items.Count);
+        GameObject originalItem = _items[itemIndex];
+
+        if (originalItem == null)
+        {
+            Debug.LogError("生成するアイテムが設定されていません。", this);
+            return;
+        }
+
+        float minX = _minSpawnPosX.position.x;
+        float maxX = _maxSpawnPosX.position.x;
+
+        float minZ = _minSpawnPosZ.position.z;
+        float maxZ = _maxSpawnPosZ.position.z;
+
+        float randomX = Random.Range(minX, maxX);
+        float randomZ = Random.Range(minZ, maxZ);
+        float spawnY = originalItem.transform.localScale.y / 1.5f;
+
+        Vector3 spawnPosition = new Vector3(randomX, spawnY, randomZ);
+
+        // アイテムを生成
+        GameObject item = Instantiate(originalItem, spawnPosition, Quaternion.identity, _itemsParent);
+
+        StartCoroutine(ItemRotateLoop(item));
+    }
+
+    // 回転処理
+    private IEnumerator ItemRotateLoop(GameObject item)
+    {
+        while (item != null)
+        {
+            item.transform.Rotate(Vector3.up, _itemsRotateSpeed * Time.deltaTime);
+            yield return null;
+        }
     }
 
     // タレット生成
     private void GenerateTurret()
     {
+        if (_difficultyType <= 10 || _gameSet) return;
 
+        _turretSpawnTimer += Time.deltaTime;
+        if (_turretSpawnTimer < _turretSpawnInterval) return;
+
+        _turretSpawnTimer = 0;
+
+        // タレットを生成
+        if (_generateTurretAsync != null) StopCoroutine(_generateTurretAsync);
+        _generateTurretAsync = StartCoroutine(GenerateTurretAsync());
+    }
+
+    private IEnumerator GenerateTurretAsync()
+    {
+        yield return null;
     }
 
     //=================================== バトル開始・終了処理 =====================================
-    // 
+    // 勝敗を受け取って、実行する処理を判断する
     public void GameSet(BattleResult result)
     {
+        _gameSet = true;
+
         switch (result)
         {
             // 勝利
-            case BattleResult.Win: break;
+            case BattleResult.Win: 
+                // 勝利時に処理
+
+                break;
             
             // 敗北
-            case BattleResult.Lose: break;
+            case BattleResult.Lose: 
+                // 敗北時の処理
+
+                break;
         }
     }
 
+    // ゲームセット演出
+    private IEnumerator GameSetSequence()
+    {
+        yield return null;
+    }
 }

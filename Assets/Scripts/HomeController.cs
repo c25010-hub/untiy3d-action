@@ -28,6 +28,9 @@ public class HomeController : LoadingController
     private float _playerCritRate;
     private float _playerCritDamage;
 
+    // 累乗倍率
+    private float _playerStatusExponent; // ステータスを累乗する値
+
     // 計算結果
 
     private int _playerResultHp;
@@ -55,6 +58,9 @@ public class HomeController : LoadingController
     // クリティカル
     private float _bossCritRate;
     private float _bossCritDamage;
+
+    // 累乗倍率
+    private float _bossStatusExponent; // ステータスを累乗する値
 
     // 計算結果
     private int _bossResultHp;
@@ -91,13 +97,10 @@ public class HomeController : LoadingController
     private readonly List<AudioClip> _se = new List<AudioClip>();
 
     private CharacterType _characterType = CharacterType.Player;
-    private int _difficultyType = 0;
+    private int _difficultyType = 0;// カーソルのインデックスとして使う
     private int _stageLevel = 10;
 
-    // ステータスを累乗する値
-    private float _statusExponent = 1.2f;
-    // レベル値の倍率
-    private float _levelMultiplier = 0.25f;
+    private float _stageLevelMultiplier = 0.2f;// ステージレベル値の倍率
 
     private void Awake()
     {
@@ -153,9 +156,9 @@ public class HomeController : LoadingController
         }
 
         // 基礎ステータス
-        _playerHp = Mathf.RoundToInt(_playerData.BaseHp * _playerData.HpMultiplier);
-        _playerAtk = Mathf.RoundToInt(_playerData.BaseAtk * _playerData.AtkMultiplier);
-        _playerDef = Mathf.RoundToInt(_playerData.BaseDef * _playerData.DefMultiplier);
+        _playerHp = _playerData.BaseHp;
+        _playerAtk = _playerData.BaseAtk;
+        _playerDef = _playerData.BaseDef;
         _playerEnergy = _playerData.BaseEnergy;
         _playerStamina = _playerData.BaseStamina;
 
@@ -167,6 +170,9 @@ public class HomeController : LoadingController
         _playerCritRate = _playerData.BaseCritRate;
         _playerCritDamage = _playerData.BaseCritDamage;
 
+        // 累乗倍率
+        _playerStatusExponent = _playerData.StatusExponent;
+
         // ボス
         if (!_bossData)
         {
@@ -175,9 +181,9 @@ public class HomeController : LoadingController
         }
 
         // 基礎ステータス
-        _bossHp = Mathf.RoundToInt(_bossData.BaseHp * _bossData.HpMultiplier);
-        _bossAtk = Mathf.RoundToInt(_bossData.BaseAtk * _bossData.AtkMultiplier);
-        _bossDef = Mathf.RoundToInt(_bossData.BaseDef * _bossData.DefMultiplier);
+        _bossHp = _bossData.BaseHp;
+        _bossAtk = _bossData.BaseAtk;
+        _bossDef = _bossData.BaseDef;
 
         // 耐性
         _bossPhysResist = _bossData.BasePhysResist ;
@@ -186,6 +192,9 @@ public class HomeController : LoadingController
         // クリティカル
         _bossCritRate = _bossData.BaseCritRate;
         _bossCritDamage = _bossData.BaseCritDamage;
+
+        // 累乗倍率
+        _bossStatusExponent = _bossData.StatusExponent;
     }
 
     // 保存した難易度を適用
@@ -265,18 +274,18 @@ public class HomeController : LoadingController
                 image.gameObject.SetActive(true);
             }
 
-            // ステータスを計算
-            _playerResultHp = Mathf.RoundToInt(_playerHp * Mathf.Pow(_stageLevel * _levelMultiplier, _statusExponent));
-            _playerResultAtk = Mathf.RoundToInt(_playerAtk * Mathf.Pow(_stageLevel * _levelMultiplier, _statusExponent));
-            _playerResultDef = Mathf.RoundToInt(_playerDef * Mathf.Pow(_stageLevel * _levelMultiplier, _statusExponent));
+            // ステータスを計算： 基礎ステータス = 対象ステータス x (ステージレベル x 0.2) 0.5乗
+            _playerResultHp = Mathf.RoundToInt(_playerHp * Mathf.Pow(_stageLevel * _stageLevelMultiplier, _playerStatusExponent));
+            _playerResultAtk = Mathf.RoundToInt(_playerAtk * Mathf.Pow(_stageLevel * _stageLevelMultiplier, _playerStatusExponent));
+            _playerResultDef = Mathf.RoundToInt(_playerDef * Mathf.Pow(_stageLevel * _stageLevelMultiplier, _playerStatusExponent));
             _playerResultEnergy = _playerEnergy;
             _playerResultStamina = _playerStamina;
 
-            _playerResultPhysResist = _playerPhysResist * _stageLevel * _levelMultiplier;
-            _playerResultEnergyResist = _playerEnergyResist * _stageLevel * _levelMultiplier;
-
-            _playerResultCritRate = Mathf.Min(_playerCritRate * _stageLevel * _levelMultiplier * 100, 100.0f);
-            _playerResultCritDamage = _playerCritDamage * _stageLevel * _levelMultiplier * 100 * 0.5f;
+            _playerResultPhysResist = _playerPhysResist;
+            _playerResultEnergyResist = _playerEnergyResist;
+            _playerResultCritRate = Mathf.Min(_playerCritRate, 1.0f);
+            // 会心ダメージ = 基礎倍率 + (ステージレベル x 0.2) 0.5乗
+            _playerResultCritDamage = _playerCritDamage * Mathf.Pow(_stageLevel * _stageLevelMultiplier, _playerStatusExponent);
 
             // テキストに代入
             _statusTexts[0].text = $"HP：{_playerResultHp}";
@@ -287,8 +296,8 @@ public class HomeController : LoadingController
 
             _statusTexts[5].text = $"物理耐性：{_playerResultPhysResist:F1}";
             _statusTexts[6].text = $"エネルギー耐性：{_playerResultEnergyResist:F1}";
-            _statusTexts[7].text = $"会心率：{_playerResultCritRate:F1}";
-            _statusTexts[8].text = $"会心ダメージ：{_playerResultCritDamage:F1}";
+            _statusTexts[7].text = $"会心率：{_playerResultCritRate * 100:F1}";
+            _statusTexts[8].text = $"会心ダメージ：{_playerResultCritDamage * 100:F1}";
         }
         else
         {
@@ -298,16 +307,16 @@ public class HomeController : LoadingController
                 image.gameObject.SetActive(false);
             }
 
-            // ステータスを計算
-            _bossResultHp = Mathf.RoundToInt(_bossHp * Mathf.Pow(_stageLevel * _levelMultiplier, _statusExponent));
-            _bossResultAtk = Mathf.RoundToInt(_bossAtk * Mathf.Pow(_stageLevel * _levelMultiplier, _statusExponent));
-            _bossResultDef = Mathf.RoundToInt(_bossDef * Mathf.Pow(_stageLevel * _levelMultiplier, _statusExponent));
+            // ステータスを計算： 基礎ステータス = 対象ステータス x (ステージレベル x 0.2) 0.6乗
+            _bossResultHp = Mathf.RoundToInt(_bossHp * Mathf.Pow(_stageLevel * _stageLevelMultiplier, _bossStatusExponent));
+            _bossResultAtk = Mathf.RoundToInt(_bossAtk * Mathf.Pow(_stageLevel * _stageLevelMultiplier, _bossStatusExponent));
+            _bossResultDef = Mathf.RoundToInt(_bossDef * Mathf.Pow(_stageLevel * _stageLevelMultiplier, _bossStatusExponent));
 
-            _bossResultPhysResist = _bossPhysResist * _stageLevel * _levelMultiplier;
-            _bossResultEnergyResist = _bossEnergyResist * _stageLevel * _levelMultiplier;
-
-            _bossResultCritRate = Mathf.Min(_bossCritRate * _stageLevel * _levelMultiplier * 100, 100.0f);
-            _bossResultCritDamage = _bossCritDamage * _stageLevel * _levelMultiplier * 100 *0.5f;
+            _bossResultPhysResist = _bossPhysResist;
+            _bossResultEnergyResist = _bossEnergyResist;
+            _bossResultCritRate = Mathf.Min(_bossCritRate, 1.0f);
+            // 会心ダメージ = 基礎倍率 x (ステージレベル x 0.2) 0.6乗
+            _bossResultCritDamage = _bossCritDamage * Mathf.Pow(_stageLevel * _stageLevelMultiplier, _bossStatusExponent);
 
             // テキストに代入
             _statusTexts[0].text = $"HP：{_bossResultHp}";
@@ -316,8 +325,8 @@ public class HomeController : LoadingController
 
             _statusTexts[5].text = $"物理耐性：{_bossResultPhysResist:F1}";
             _statusTexts[6].text = $"エネルギー耐性：{_bossResultEnergyResist:F1}";
-            _statusTexts[7].text = $"会心率：{_bossResultCritRate:F1}";
-            _statusTexts[8].text = $"会心ダメージ：{_bossResultCritDamage:F1}";
+            _statusTexts[7].text = $"会心率：{_bossResultCritRate * 100:F1}";
+            _statusTexts[8].text = $"会心ダメージ：{_bossResultCritDamage * 100:F1}";
         }
     }
 
@@ -347,37 +356,40 @@ public class HomeController : LoadingController
     public void BattleStart()
     {
         SaveStatusLevel();
-        StartCoroutine(ClosePage());
+        StartCoroutine(ExpansionPage());
     }
 
     // ステータスを保存する処理
     private void SaveStatusLevel()
     {
-        // カーソルのインデックス番号
+        // 難易度
         PlayerPrefs.SetInt("DifficultyType", _difficultyType);
+        // ステージレベル
         PlayerPrefs.SetInt("StageLevel", _stageLevel);
+        // 累乗値
+        PlayerPrefs.SetFloat("StageLevelMultiplier", _stageLevelMultiplier);
 
         // プレイヤー
-        PlayerPrefs.SetInt("PlayerHP", _playerResultHp);
-        PlayerPrefs.SetInt("PlayerATK", _playerResultAtk);
-        PlayerPrefs.SetInt("PlayerDEF", _playerResultDef);
-        PlayerPrefs.SetInt("PlayerEnergy", _playerResultEnergy);
-        PlayerPrefs.SetInt("PlayerStamina", _playerResultStamina);
+        PlayerPrefs.SetInt("PlayerBaseHp", _playerResultHp);
+        PlayerPrefs.SetInt("PlayerBaseAtk", _playerResultAtk);
+        PlayerPrefs.SetInt("PlayerBaseDef", _playerResultDef);
+        PlayerPrefs.SetInt("PlayerBaseEnergy", _playerResultEnergy);
+        PlayerPrefs.SetInt("PlayerBaseStamina", _playerResultStamina);
 
-        PlayerPrefs.SetFloat("PlayerPhysResist", _playerResultPhysResist);
-        PlayerPrefs.SetFloat("PlayerEnergyResist", _playerResultEnergyResist);
-        PlayerPrefs.SetFloat("PlayerCritRate", _playerResultCritRate);
-        PlayerPrefs.SetFloat("PlayerCritDamage", _playerResultCritDamage);
+        PlayerPrefs.SetFloat("PlayerBasePhysResist", _playerResultPhysResist);
+        PlayerPrefs.SetFloat("PlayerBaseEnergyResist", _playerResultEnergyResist);
+        PlayerPrefs.SetFloat("PlayerBaseCritRate", _playerResultCritRate);
+        PlayerPrefs.SetFloat("PlayerBaseCritDamage", _playerResultCritDamage);
 
         // ボス
-        PlayerPrefs.SetInt("BossHP", _bossResultHp);
-        PlayerPrefs.SetInt("BossATK", _bossResultAtk);
-        PlayerPrefs.SetInt("BossDEF", _bossResultDef);
+        PlayerPrefs.SetInt("BossBaseHp", _bossResultHp);
+        PlayerPrefs.SetInt("BossBaseAtk", _bossResultAtk);
+        PlayerPrefs.SetInt("BossBaseDef", _bossResultDef);
 
-        PlayerPrefs.SetFloat("BossPhysResist", _bossResultPhysResist);
-        PlayerPrefs.SetFloat("BossEnergyResist", _bossResultEnergyResist);
-        PlayerPrefs.SetFloat("BossCritRate", _bossResultCritRate);
-        PlayerPrefs.SetFloat("BossCritDamage", _bossResultCritDamage);
+        PlayerPrefs.SetFloat("BossBasePhysResist", _bossResultPhysResist);
+        PlayerPrefs.SetFloat("BossBaseEnergyResist", _bossResultEnergyResist);
+        PlayerPrefs.SetFloat("BossBaseCritRate", _bossResultCritRate);
+        PlayerPrefs.SetFloat("BossBaseCritDamage", _bossResultCritDamage);
     }
 
     //=================================== モーション処理 =====================================
@@ -492,8 +504,8 @@ public class HomeController : LoadingController
         }
     }
 
-    // ホームページをしまう処理
-    IEnumerator ClosePage()
+    // ホームページの拡大処理
+    IEnumerator ExpansionPage()
     {
         float speed = 4.0f;
         float delta = 0.0f;
