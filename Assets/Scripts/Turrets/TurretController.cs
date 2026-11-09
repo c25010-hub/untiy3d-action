@@ -42,6 +42,7 @@ public class TurretController : MonoBehaviour, IDamageable
 
     // SliderTypの容量に合わせる
     private Coroutine[] _coroutines = new Coroutine[System.Enum.GetValues(typeof(SliderTyp)).Length];
+    private Coroutine _reGenerateEnergy;
 
     [SerializeField] private float _rotationSpeed;      // 回転速度
     [SerializeField] private float _firstShotMultiplier;// ダメージ倍率
@@ -108,10 +109,6 @@ public class TurretController : MonoBehaviour, IDamageable
         _currentEnergyResist = _maxEnergyResist;
         _currentCritRate = _maxCritRate;
         _currentCritDamage = _maxCritDamage;
-
-        // その他
-        _currentEnergy = _maxEnergy;
-        _currentFireCooldown = _maxFireCooldown;
     }
 
     //=================================== 動作制御 =====================================
@@ -149,6 +146,8 @@ public class TurretController : MonoBehaviour, IDamageable
         if (_currentFireCooldown <= 0)
         {
             _currentFireCooldown = _maxFireCooldown;
+            // 必須：発砲音・エフェクト
+
             Attack();
         }
     }
@@ -190,7 +189,8 @@ public class TurretController : MonoBehaviour, IDamageable
         if (_currentEnergy <= 0)
         {
             _readyToFire = false;
-            StartCoroutine(ReGenerateEnergy());
+            if (_reGenerateEnergy != null) StopCoroutine(_reGenerateEnergy);
+            _reGenerateEnergy = StartCoroutine(ReGenerateEnergy());
         }
     }
 
@@ -316,7 +316,6 @@ public class TurretController : MonoBehaviour, IDamageable
         }
 
         _turretMount.transform.position = targetPos;
-
         elapsedTime = 0f;
 
         // タレットの頭部を回転
@@ -331,11 +330,13 @@ public class TurretController : MonoBehaviour, IDamageable
 
         _turretHead.transform.rotation = targetRot;
 
-        // データを初期化
-        _currentEnergy = _maxEnergy;
+        _currentEnergy = 0;
         _currentFireCooldown = _maxFireCooldown;
+        
+        Debug.Log("タレット：起動準備完了！");
+        Debug.Log("エネルギー充填開始！");
 
-        _readyToFire = true;
-        Debug.Log("タレット：起動準備完了");
+        if (_reGenerateEnergy != null) StopCoroutine(_reGenerateEnergy);
+        _reGenerateEnergy = StartCoroutine(ReGenerateEnergy());
     }
 }
