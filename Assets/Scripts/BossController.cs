@@ -39,6 +39,9 @@ public class BossController : MonoBehaviour, IDamageable
     [SerializeField] private Transform _playerTransform;
     public Transform PlayerTransform => _playerTransform;
 
+    // SliderTypの容量に合わせる
+    private Coroutine[] _coroutines = new Coroutine[System.Enum.GetValues(typeof(SliderTyp)).Length];
+
     private void Awake()
     {
         //  ステータスをセット
@@ -72,14 +75,14 @@ public class BossController : MonoBehaviour, IDamageable
         float _baseCritDamage = PlayerPrefs.GetFloat("BossBaseCritDamage", _bossData.BaseCritDamage);// 会心ダメージ
 
         // Max
-        _maxHp = _bossData.BaseHp;
-        _baseAtk = _bossData.BaseAtk;
-        _baseDef = _bossData.BaseDef;
+        _maxHp = _baseHp;
+        _maxAtk = _baseAtk;
+        _maxDef = _baseDef;
 
-        _basePhysResist = _bossData.BasePhysResist;    // 物理耐性
-        _baseEnergyResist = _bossData.BaseEnergyResist;// エネルギー耐性
-        _baseCritRate = _bossData.BaseCritRate;
-        _baseCritDamage = _bossData.BaseCritDamage;
+        _maxPhysResist = _basePhysResist;    // 物理耐性
+        _maxEnergyResist = _baseEnergyResist;// エネルギー耐性
+        _maxCritRate = _baseCritRate;
+        _maxCritDamage = _baseCritDamage;
 
         // 現在値
         _currentHp = _maxHp;
@@ -101,17 +104,17 @@ public class BossController : MonoBehaviour, IDamageable
 
     }
 
-    //=================================== ダメージ計算式・取得処理 =====================================
+    //=================================== ダメージ計算処理・取得処理 =====================================
+    // ダメージ計算式：基礎攻撃力 x ダメージ倍率 x (1 + 会心ダメージ)
     private int CalculateDamage(float damageMultiplier)
     {
-        // 攻撃力 x 倍率 x (1 + 会心ダメージ)
         bool isCritical = Random.value <= _currentCritRate;
         float finalDamage = _currentAtk * damageMultiplier * (isCritical ? (1 + _currentCritDamage) : 1.0f);
 
         return (int)finalDamage;
     }
 
-    // ダメージを受け取る
+    // ダメージを受け取る：(受けたダメージ - 防御力) x (1 - 耐性%)
     public void TakeDamage(int damage, DamageType damageType)
     {
         if (_currentHp <= 0) return;
@@ -128,9 +131,8 @@ public class BossController : MonoBehaviour, IDamageable
             targetResist = _currentEnergyResist;
         }
 
-        // (受けたダメージ - 防御力) x (1 - 耐性%)
         float baseDamage = Mathf.Max(damage - _currentDef, 1f);
-        int finalDamage = Mathf.RoundToInt(baseDamage * (1.0f - targetResist));
+        int finalDamage = Mathf.RoundToInt(baseDamage * (1f - targetResist));
         finalDamage = Mathf.Max(finalDamage, 1);
 
         // HPの変動と死亡処理
@@ -138,8 +140,13 @@ public class BossController : MonoBehaviour, IDamageable
         _currentHp = Mathf.Max(_currentHp, 0);
     }
 
-    //=================================== 負け演出 =====================================
-
+    //=================================== リタイア処理 =====================================
+    // リタイア演出実行関数
+    private void Defeated()
+    {
+        // リタイア演出は GameController に通知を出す
+        _gameController.GameSet(BattleResult.Lose);
+    }
 
     //=================================== 当たり判定処理 =====================================
     public void OnTriggerEnter(Collider other)

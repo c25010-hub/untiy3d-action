@@ -48,7 +48,8 @@ public class PlayerController : MonoBehaviour, IDamageable
     [SerializeField] private Collider[] _colliders = new Collider[4];
     [SerializeField] private PlayerDataSO _playerData;
 
-    private Coroutine[] _coroutines = new Coroutine[3];
+    // SliderTypの容量に合わせる
+    private Coroutine[] _coroutines = new Coroutine[System.Enum.GetValues(typeof(SliderTyp)).Length];
     private Coroutine _rapidFireOn, _rapidFireOff;
     private Camera _mainCamera;
     private Rigidbody _playerRb;
@@ -248,14 +249,14 @@ public class PlayerController : MonoBehaviour, IDamageable
                 float multiplier = _playerData.FirstShotMultiplier;
 
                 damageable.TakeDamage(CalculateDamage(multiplier), DamageType.EnergyDamage);
+
+                int beforeValue = _currentEnergy;
+                _currentEnergy -= _shotCost;
+
+                // プレイヤーのエネルギー量をUIに反映する（GameController に通知を送る）
+                if (_coroutines[(int)SliderTyp.PlayerEnergySlider] != null) StopCoroutine(_coroutines[(int)SliderTyp.PlayerEnergySlider]);
+                _coroutines[(int)SliderTyp.PlayerEnergySlider] = StartCoroutine(_gameController.UpdateSlider(SliderTyp.PlayerEnergySlider, _currentEnergy, beforeValue, _maxEnergy));
             }
-
-            int beforeValue = _currentEnergy;
-            _currentEnergy -= _shotCost;
-
-            // プレイヤーのエネルギー量をUIに反映する（GameController に通知を送る）
-            if (_coroutines[(int)SliderTyp.PlayerEnergySlider] != null) StopCoroutine(_coroutines[(int)SliderTyp.PlayerEnergySlider]);
-            _coroutines[(int)SliderTyp.PlayerEnergySlider] = StartCoroutine(_gameController.UpdateSlider(SliderTyp.PlayerEnergySlider, _currentEnergy, beforeValue, _maxEnergy));
         }
     }
     
@@ -488,17 +489,16 @@ public class PlayerController : MonoBehaviour, IDamageable
         Time.timeScale = 1.0f;
     }
 
-    //=================================== ダメージ計算式・取得処理 =====================================
-    // ダメージ計算処理
+    //=================================== ダメージ計処理・取得処理 =====================================
+    // ダメージ計算算式：基礎攻撃力 x (1 + 攻撃力バフ) x ダメージ倍率 x(1 + 会心ダメージ)
     private int CalculateDamage(float damageMultiplier)
     {
-        // 攻撃力 x (1 + 攻撃力バフ) x 倍率 x (1 + 会心ダメージ) x (1+ 会心ダメージバフ)
         bool isCritical = UnityEngine.Random.value <= _currentCritRate;
         float finalDamage = _currentAtk * (1 + Buffs[(int)BuffType.AttackUp]) * damageMultiplier * (isCritical ? (1 + _currentCritDamage) * (1 + Buffs[(int)BuffType.CritDamageUp]) : 1.0f);
         return(int)finalDamage;
     }
 
-    // ダメージを受け取る
+    // ダメージを受け取る：(受けたダメージ - 防御力 x (1 + 防御力バフ)) x (1 - 耐性%)
     public void TakeDamage(int damage, DamageType damageType)
     {
         if (_currentHp <= 0) return;
@@ -516,9 +516,8 @@ public class PlayerController : MonoBehaviour, IDamageable
             targetResist = _currentEnergyResist;
         }
 
-        // (受けたダメージ - 防御力 x (1 + 防御力バフ)) x (1 - 耐性%)
         float baseDamage = Mathf.Max(damage - _currentDef * (1 + Buffs[(int)BuffType.DefUp]), 1f);
-        int finalDamage = Mathf.RoundToInt(baseDamage * (1.0f - targetResist));
+        int finalDamage = Mathf.RoundToInt(baseDamage * (1f - targetResist));
         finalDamage = Mathf.Max(finalDamage, 1);
 
         int beforeValue = _currentHp;
@@ -537,13 +536,11 @@ public class PlayerController : MonoBehaviour, IDamageable
         }
     }
 
-    // 負け演出実行関数
+    //=================================== リタイア処理 =====================================
+    // リタイア演出実行関数
     private void Defeated()
     {
-        // アニメーション
-
-
-        // 負け演出は GameController に通知を出す
+        // リタイア演出は GameController に通知を出す
         _gameController.GameSet(BattleResult.Lose);
     }
 

@@ -15,8 +15,8 @@ MonoBehaviour:
   _baseHp: 1060
   _baseAtk: 220
   _baseDef: 72
-  _baseEnergy: 1000
-  _baseStamina: 1000
+  _baseEnergy: 100
+  _baseStamina: 100
   _basePhysResist: 0.1
   _baseEnergyResist: 0.2
   _baseCritRate: 0.05

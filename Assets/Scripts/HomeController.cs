@@ -283,7 +283,7 @@ public class HomeController : LoadingController
 
             _playerResultPhysResist = _playerPhysResist;
             _playerResultEnergyResist = _playerEnergyResist;
-            _playerResultCritRate = Mathf.Min(_playerCritRate, 1.0f);
+            _playerResultCritRate = Mathf.Clamp01(_playerCritRate);
             // 会心ダメージ = 基礎倍率 + (ステージレベル x 0.2) 0.5乗
             _playerResultCritDamage = _playerCritDamage * Mathf.Pow(_stageLevel * _stageLevelMultiplier, _playerStatusExponent);
 
@@ -294,8 +294,8 @@ public class HomeController : LoadingController
             _statusTexts[3].text = $"エネルギー量：{_playerResultEnergy}";
             _statusTexts[4].text = $"スタミナ：{_playerResultStamina}";
 
-            _statusTexts[5].text = $"物理耐性：{_playerResultPhysResist:F1}";
-            _statusTexts[6].text = $"エネルギー耐性：{_playerResultEnergyResist:F1}";
+            _statusTexts[5].text = $"物理耐性：{_playerResultPhysResist * 100:F1}";
+            _statusTexts[6].text = $"エネルギー耐性：{_playerResultEnergyResist * 100:F1}";
             _statusTexts[7].text = $"会心率：{_playerResultCritRate * 100:F1}";
             _statusTexts[8].text = $"会心ダメージ：{_playerResultCritDamage * 100:F1}";
         }
@@ -314,7 +314,7 @@ public class HomeController : LoadingController
 
             _bossResultPhysResist = _bossPhysResist;
             _bossResultEnergyResist = _bossEnergyResist;
-            _bossResultCritRate = Mathf.Min(_bossCritRate, 1.0f);
+            _bossResultCritRate = Mathf.Clamp01(_bossCritRate);
             // 会心ダメージ = 基礎倍率 x (ステージレベル x 0.2) 0.6乗
             _bossResultCritDamage = _bossCritDamage * Mathf.Pow(_stageLevel * _stageLevelMultiplier, _bossStatusExponent);
 
@@ -323,8 +323,8 @@ public class HomeController : LoadingController
             _statusTexts[1].text = $"攻撃力：{_bossResultAtk}";
             _statusTexts[2].text = $"防御力：{_bossResultDef}";
 
-            _statusTexts[5].text = $"物理耐性：{_bossResultPhysResist:F1}";
-            _statusTexts[6].text = $"エネルギー耐性：{_bossResultEnergyResist:F1}";
+            _statusTexts[5].text = $"物理耐性：{_bossResultPhysResist * 100:F1}";
+            _statusTexts[6].text = $"エネルギー耐性：{_bossResultEnergyResist * 100:F1}";
             _statusTexts[7].text = $"会心率：{_bossResultCritRate * 100:F1}";
             _statusTexts[8].text = $"会心ダメージ：{_bossResultCritDamage * 100:F1}";
         }

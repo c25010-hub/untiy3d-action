@@ -5,11 +5,13 @@ using UnityEngine.UI;
 
 public enum SliderTyp
 {
-    // NOTE: 配列（_slider）と順番を統一しろ！
+    // NOTE:配列（_slider）と順番を統一しろ！
     PlayerHpSlider = 0,
     PlayerEnergySlider = 1,
     PlayerStaminaSlider = 2,
-    BossHpSlider = 3
+    BossHpSlider = 3,
+    TurretHpSlider = 4,
+    TurretEnergySlider = 5,
 }
 
 public enum BattleResult
@@ -29,8 +31,7 @@ public class GameController : LoadingController
     [SerializeField] private List<GameObject> _items = new List<GameObject>();// プレファブ化されたアイテム
     [SerializeField] private GameObject[] _turretStands = new GameObject[2];
     [SerializeField] private GameObject[] _turrets = new GameObject[2];
-    
-    [SerializeField] private Slider[] _slider = new Slider[4];
+    [SerializeField] private Slider[] _slider = new Slider[6];// NOTE:SliderTypと同じ順番でスライダーを格納
 
     private Coroutine _generateTurretAsync;
 
