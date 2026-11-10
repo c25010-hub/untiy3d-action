@@ -96,6 +96,25 @@ public class BossController : MonoBehaviour, IDamageable
 
     //=================================== イベント関数 =====================================
 
+    public void Attack1()
+    {
+
+    }
+
+    public void Attack2()
+    {
+
+    }
+
+    public void Attack3()
+    {
+
+    }
+
+    public void Attack4()
+    {
+
+    }
 
     //=================================== ボスの制御関数 =====================================
     // 動作制御

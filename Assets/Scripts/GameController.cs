@@ -159,7 +159,7 @@ public class GameController : LoadingController
 
         // 配列の範囲チェック
         if (index < 0 || index >= _sliders.Length) yield break;
-        UnityEngine.UI.Slider slider = _sliders[index];
+        Slider slider = _sliders[index];
 
         // Sliderと最大値のチェック
         if (!slider || maxValue <= 0) yield break;

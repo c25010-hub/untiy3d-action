@@ -64,7 +64,7 @@ public class PlayerController : MonoBehaviour, IDamageable
 
     private float _shootingCooldown = 0.2f; // 銃撃のクールダウン
     private float _staminaRegenDelay = 0.1f;// スタミナ回復が始まるまでの遅延
-    private float _comboTimeout = 2.0f;     // コンボ受付の猶予時間
+    private float _comboTimeout = 1.0f;     // コンボ受付の猶予時間
 
     private float _shootingTimer;
     private float _staminaRegenTimer;
@@ -173,8 +173,9 @@ public class PlayerController : MonoBehaviour, IDamageable
     /// </summary>
     public void Attack1()
     {
+        if (_avoidance || _shootingMode || _defeated) return;
         _hitCount = 1;
-        _colliders[0].gameObject.SetActive(true);
+        _colliders[0].enabled = true;
     }
 
     /// <summary>
@@ -183,8 +184,9 @@ public class PlayerController : MonoBehaviour, IDamageable
     /// </summary>
     public void Attack2()
     {
+        if (_avoidance || _shootingMode || _defeated) return;
         _hitCount = 2;
-        _colliders[1].gameObject.SetActive(true);
+        _colliders[1].enabled = true;
     }
 
     /// <summary>
@@ -193,8 +195,9 @@ public class PlayerController : MonoBehaviour, IDamageable
     /// </summary>
     public void Attack3()
     {
+        if (_avoidance || _shootingMode || _defeated) return;
         _hitCount = 3;
-        _colliders[2].gameObject.SetActive(true);
+        _colliders[2].enabled = true;
     }
 
     /// <summary>
@@ -203,29 +206,20 @@ public class PlayerController : MonoBehaviour, IDamageable
     /// </summary>
     public void AttackColliderOff()
     {
-        for (int i = 0; i < _colliders.Length;i++)
-        {
-            _colliders[i].gameObject.SetActive(false);
-        }
-
-        // 攻撃判定が消えたら、コンボ猶予（リキャスト）のカウントを開始   
-        _comboTimer = 0f;
+        // 攻撃用のコライダーのみ非表示
+        _colliders[0].enabled = false;
+        _colliders[1].enabled = false;
+        _colliders[2].enabled = false;
     }
 
     /// <summary>
     /// 通常攻撃時から次の攻撃につなげるまでにに残された時間をカウント
+    /// と同時に攻撃終了のフラグ
     /// </summary>
-    public void StartAttackRecast()
+    public void StartAttackTimer()
     {
         _startAttackTimer = true;
-    }
-
-    /// <summary>
-    /// 攻撃終了フラグを下ろす（これで次の入力や移動が可能になる）
-    /// </summary>
-    public void EndAttack()
-    {
-        _isAttacking = false; 
+        _isAttacking = false;
     }
 
     /// <summary>
@@ -242,20 +236,23 @@ public class PlayerController : MonoBehaviour, IDamageable
         // レイを飛ばして何かに当たったら
         if (Physics.Raycast(ray, out hit, _gunfireRange))
         {
-            IDamageable damageable = hit.collider.GetComponent<IDamageable>();
-
-            if (damageable != null)
+            if (hit.collider.transform.root.CompareTag("Enemy"))
             {
-                float multiplier = _playerData.FirstShotMultiplier;
+                IDamageable damageable = hit.collider.GetComponentInParent<IDamageable>();
 
-                damageable.TakeDamage(CalculateDamage(multiplier), DamageType.EnergyDamage);
+                if (damageable != null)
+                {
+                    float multiplier = _playerData.FirstShotMultiplier;
 
-                int beforeValue = _currentEnergy;
-                _currentEnergy -= _shotCost;
+                    damageable.TakeDamage(CalculateDamage(multiplier), DamageType.EnergyDamage);
 
-                // プレイヤーのエネルギー量をUIに反映する（GameController に通知を送る）
-                if (_coroutines[(int)SliderType.PlayerEnergySlider] != null) StopCoroutine(_coroutines[(int)SliderType.PlayerEnergySlider]);
-                _coroutines[(int)SliderType.PlayerEnergySlider] = StartCoroutine(_gameController.UpdateSlider(SliderType.PlayerEnergySlider, _currentEnergy, beforeValue, _maxEnergy));
+                    int beforeValue = _currentEnergy;
+                    _currentEnergy -= _shotCost;
+
+                    // プレイヤーのエネルギー量をUIに反映する（GameController に通知を送る）
+                    if (_coroutines[(int)SliderType.PlayerEnergySlider] != null) StopCoroutine(_coroutines[(int)SliderType.PlayerEnergySlider]);
+                    _coroutines[(int)SliderType.PlayerEnergySlider] = StartCoroutine(_gameController.UpdateSlider(SliderType.PlayerEnergySlider, _currentEnergy, beforeValue, _maxEnergy));
+                }
             }
         }
     }
@@ -265,6 +262,7 @@ public class PlayerController : MonoBehaviour, IDamageable
     /// </summary>
     public void AvoidanceOff()
     {
+        _colliders[3].enabled = false;
         _avoidance = false;
         Time.timeScale = 1.0f;
     }
@@ -322,7 +320,10 @@ public class PlayerController : MonoBehaviour, IDamageable
                     RapidFireOff();
                 }
 
+                _colliders[3].enabled = true;
                 _avoidance = true;
+                StartAttackTimer();
+                AttackColliderOff();
                 int beforeValue = _currentStamina;
                 _currentStamina -= _staminaConsumption;
                 _playerAnim.SetTrigger("Dodge");
@@ -377,8 +378,9 @@ public class PlayerController : MonoBehaviour, IDamageable
         // 通常攻撃
         if (Mouse.current.leftButton.wasPressedThisFrame && _isAttacking == false)
         {
-            _isAttacking = true;        // 攻撃中フラグを立てる
-            _startAttackTimer = false;  // タイマーを止める
+            _isAttacking = true;      // 攻撃中フラグを立てる
+            _startAttackTimer = false;// タイマーを止める
+            _comboTimer = 0f;         // タイマーをリセット
 
             if (_attackCount == 0)
             {
@@ -616,39 +618,41 @@ public class PlayerController : MonoBehaviour, IDamageable
     public void OnTriggerEnter(Collider other)
     {
         //=================================== 通常攻撃の当たり判定 =====================================
-        if (_hitCount > 0 && _colliders[_hitCount - 1].gameObject.activeSelf)
+        if (_hitCount > 0 && _colliders[_hitCount - 1].enabled)
         {
-            IDamageable damageable = other.gameObject.GetComponent<IDamageable>();
-
-            if (damageable != null)
+            if (other.transform.root.CompareTag("Enemy"))
             {
-                float multiplier = 1.0f;
+                IDamageable damageable = other.GetComponentInParent<IDamageable>();
 
-                if (_hitCount == 1) multiplier = _playerData.FirstStrikeMultiplier;
-                else if (_hitCount == 2) multiplier = _playerData.SecondStrikeMultiplier;
-                else if (_hitCount == 3) multiplier = _playerData.ThirdStrikeMultiplier;
+                if (damageable != null)
+                {
+                    float multiplier = 1.0f;
 
-                Debug.Log($"通常攻撃{_hitCount}段目が当たった");
-                damageable.TakeDamage(CalculateDamage(multiplier), DamageType.PhysDamage);
+                    if (_hitCount == 1) multiplier = _playerData.FirstStrikeMultiplier;
+                    else if (_hitCount == 2) multiplier = _playerData.SecondStrikeMultiplier;
+                    else if (_hitCount == 3) multiplier = _playerData.ThirdStrikeMultiplier;
 
-                int beforeValue = _currentEnergy;
+                    Debug.Log($"通常攻撃{_hitCount}段目が当たった");
+                    damageable.TakeDamage(CalculateDamage(multiplier), DamageType.PhysDamage);
 
-                // エネルギー回復
-                if (_currentEnergy < _maxEnergy) _currentEnergy += 5 * _hitCount;
-                // 超過分を割く
-                if (_currentEnergy > _maxEnergy) _currentEnergy = _maxEnergy;
-                // 銃撃許可
-                if (_currentEnergy == _maxEnergy) _switchToShootingMode = true;
+                    int beforeValue = _currentEnergy;
 
-                // エネルギー回復量を UI に反映（GameController に通知を出す）
-                if (_coroutines[(int)SliderType.PlayerEnergySlider] != null) StopCoroutine(_coroutines[(int)SliderType.PlayerEnergySlider]);
-                _coroutines[(int)SliderType.PlayerEnergySlider] = StartCoroutine(_gameController.UpdateSlider(SliderType.PlayerEnergySlider, _currentEnergy, beforeValue, _maxEnergy));
+                    // エネルギー回復
+                    if (_currentEnergy < _maxEnergy) _currentEnergy += 5 * _hitCount;
+                    // 超過分を割く
+                    if (_currentEnergy > _maxEnergy) _currentEnergy = _maxEnergy;
+                    // 銃撃許可
+                    if (_currentEnergy == _maxEnergy) _switchToShootingMode = true;
+
+                    // エネルギー回復量を UI に反映（GameController に通知を出す）
+                    if (_coroutines[(int)SliderType.PlayerEnergySlider] != null) StopCoroutine(_coroutines[(int)SliderType.PlayerEnergySlider]);
+                    _coroutines[(int)SliderType.PlayerEnergySlider] = StartCoroutine(_gameController.UpdateSlider(SliderType.PlayerEnergySlider, _currentEnergy, beforeValue, _maxEnergy));
+                }
             }
         }
 
         //=================================== 極限回避の当たり判定 =====================================
-        if (_colliders[3].gameObject.activeSelf &&
-            other.gameObject.CompareTag("Enemy"))
+        if (_colliders[3].enabled && other.transform.root.CompareTag("Enemy"))
         {
             // 極限回避処理
             Time.timeScale = 0.4f;

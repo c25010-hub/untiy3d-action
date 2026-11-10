@@ -187,12 +187,15 @@ public class TurretController : MonoBehaviour, IDamageable
         // レイを飛ばして何かに当たったら
         if (Physics.Raycast(ray, out hit, _gunfireRange))
         {
-            IDamageable damageable = hit.collider.GetComponent<IDamageable>();
-
-            if (damageable != null)
+            if (hit.collider.CompareTag("Player"))
             {
-                float multiplier = _firstShotMultiplier;
-                damageable.TakeDamage(CalculateDamage(multiplier), DamageType.EnergyDamage);
+                IDamageable damageable = hit.collider.GetComponent<IDamageable>();
+
+                if (damageable != null)
+                {
+                    float multiplier = _firstShotMultiplier;
+                    damageable.TakeDamage(CalculateDamage(multiplier), DamageType.EnergyDamage);
+                }
             }
         }
 
