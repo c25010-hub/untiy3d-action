@@ -49,7 +49,7 @@ public class PlayerController : MonoBehaviour, IDamageable
     [SerializeField] private PlayerDataSO _playerData;
 
     // SliderTypの容量に合わせる
-    private Coroutine[] _coroutines = new Coroutine[System.Enum.GetValues(typeof(SliderTyp)).Length];
+    private Coroutine[] _coroutines = new Coroutine[System.Enum.GetValues(typeof(SliderType)).Length];
     private Coroutine _rapidFireOn, _rapidFireOff;
     private Camera _mainCamera;
     private Rigidbody _playerRb;
@@ -254,8 +254,8 @@ public class PlayerController : MonoBehaviour, IDamageable
                 _currentEnergy -= _shotCost;
 
                 // プレイヤーのエネルギー量をUIに反映する（GameController に通知を送る）
-                if (_coroutines[(int)SliderTyp.PlayerEnergySlider] != null) StopCoroutine(_coroutines[(int)SliderTyp.PlayerEnergySlider]);
-                _coroutines[(int)SliderTyp.PlayerEnergySlider] = StartCoroutine(_gameController.UpdateSlider(SliderTyp.PlayerEnergySlider, _currentEnergy, beforeValue, _maxEnergy));
+                if (_coroutines[(int)SliderType.PlayerEnergySlider] != null) StopCoroutine(_coroutines[(int)SliderType.PlayerEnergySlider]);
+                _coroutines[(int)SliderType.PlayerEnergySlider] = StartCoroutine(_gameController.UpdateSlider(SliderType.PlayerEnergySlider, _currentEnergy, beforeValue, _maxEnergy));
             }
         }
     }
@@ -338,8 +338,8 @@ public class PlayerController : MonoBehaviour, IDamageable
                 }
 
                 //プレイヤーのスタミナ量をUIに反映する
-                if (_coroutines[(int)SliderTyp.PlayerStaminaSlider] != null) StopCoroutine(_coroutines[(int)SliderTyp.PlayerStaminaSlider]);
-                _coroutines[(int)SliderTyp.PlayerStaminaSlider] = StartCoroutine(_gameController.UpdateSlider(SliderTyp.PlayerStaminaSlider, _currentStamina, beforeValue, _maxStamina));
+                if (_coroutines[(int)SliderType.PlayerStaminaSlider] != null) StopCoroutine(_coroutines[(int)SliderType.PlayerStaminaSlider]);
+                _coroutines[(int)SliderType.PlayerStaminaSlider] = StartCoroutine(_gameController.UpdateSlider(SliderType.PlayerStaminaSlider, _currentStamina, beforeValue, _maxStamina));
             }
         }
     }
@@ -360,8 +360,8 @@ public class PlayerController : MonoBehaviour, IDamageable
                 if (_currentStamina > _maxStamina) _currentStamina = _maxStamina;
 
                 //プレイヤーのスタミナ量をUIに反映する
-                if (_coroutines[(int)SliderTyp.PlayerStaminaSlider] != null) StopCoroutine(_coroutines[(int)SliderTyp.PlayerStaminaSlider]);
-                _coroutines[(int)SliderTyp.PlayerStaminaSlider] = StartCoroutine(_gameController.UpdateSlider(SliderTyp.PlayerStaminaSlider, _currentStamina, beforeValue, _maxStamina));
+                if (_coroutines[(int)SliderType.PlayerStaminaSlider] != null) StopCoroutine(_coroutines[(int)SliderType.PlayerStaminaSlider]);
+                _coroutines[(int)SliderType.PlayerStaminaSlider] = StartCoroutine(_gameController.UpdateSlider(SliderType.PlayerStaminaSlider, _currentStamina, beforeValue, _maxStamina));
             }
         }
     }
@@ -527,8 +527,8 @@ public class PlayerController : MonoBehaviour, IDamageable
         _currentHp = Mathf.Max(_currentHp, 0);
 
         // プレイヤーの HP量を UIに反映する（GameController に通知を送る）
-        if (_coroutines[(int)SliderTyp.PlayerHpSlider] != null) StopCoroutine(_coroutines[(int)SliderTyp.PlayerHpSlider]);
-        _coroutines[(int)SliderTyp.PlayerHpSlider] = StartCoroutine(_gameController.UpdateSlider(SliderTyp.PlayerHpSlider, _currentHp, beforeValue, _maxHp));
+        if (_coroutines[(int)SliderType.PlayerHpSlider] != null) StopCoroutine(_coroutines[(int)SliderType.PlayerHpSlider]);
+        _coroutines[(int)SliderType.PlayerHpSlider] = StartCoroutine(_gameController.UpdateSlider(SliderType.PlayerHpSlider, _currentHp, beforeValue, _maxHp));
 
         if (_currentHp == 0)
         {
@@ -559,8 +559,8 @@ public class PlayerController : MonoBehaviour, IDamageable
                 _currentHp += amount;
                 if (_currentHp > _maxHp) _currentHp = _maxHp;
                 // プレイヤーの HP量を UIに反映する（GameController に通知を送る）
-                if (_coroutines[(int)SliderTyp.PlayerHpSlider] != null) StopCoroutine(_coroutines[(int)SliderTyp.PlayerHpSlider]);
-                _coroutines[(int)SliderTyp.PlayerHpSlider] = StartCoroutine(_gameController.UpdateSlider(SliderTyp.PlayerHpSlider, _currentHp, beforeValue, _maxHp));
+                if (_coroutines[(int)SliderType.PlayerHpSlider] != null) StopCoroutine(_coroutines[(int)SliderType.PlayerHpSlider]);
+                _coroutines[(int)SliderType.PlayerHpSlider] = StartCoroutine(_gameController.UpdateSlider(SliderType.PlayerHpSlider, _currentHp, beforeValue, _maxHp));
                 break;
 
             // エネルギ補充
@@ -569,8 +569,8 @@ public class PlayerController : MonoBehaviour, IDamageable
                 _currentEnergy += amount;
                 if (_currentEnergy > _maxEnergy) _currentEnergy = _maxEnergy;
                 // プレイヤーのエネルギー量をUIに反映する（GameController に通知を送る）
-                if (_coroutines[(int)SliderTyp.PlayerEnergySlider] != null) StopCoroutine(_coroutines[(int)SliderTyp.PlayerEnergySlider]);
-                _coroutines[(int)SliderTyp.PlayerEnergySlider] = StartCoroutine(_gameController.UpdateSlider(SliderTyp.PlayerEnergySlider, _currentEnergy, beforeValue, _maxEnergy));
+                if (_coroutines[(int)SliderType.PlayerEnergySlider] != null) StopCoroutine(_coroutines[(int)SliderType.PlayerEnergySlider]);
+                _coroutines[(int)SliderType.PlayerEnergySlider] = StartCoroutine(_gameController.UpdateSlider(SliderType.PlayerEnergySlider, _currentEnergy, beforeValue, _maxEnergy));
                 break;
         }
     }
@@ -641,8 +641,8 @@ public class PlayerController : MonoBehaviour, IDamageable
                 if (_currentEnergy == _maxEnergy) _switchToShootingMode = true;
 
                 // エネルギー回復量を UI に反映（GameController に通知を出す）
-                if (_coroutines[(int)SliderTyp.PlayerEnergySlider] != null) StopCoroutine(_coroutines[(int)SliderTyp.PlayerEnergySlider]);
-                _coroutines[(int)SliderTyp.PlayerEnergySlider] = StartCoroutine(_gameController.UpdateSlider(SliderTyp.PlayerEnergySlider, _currentEnergy, beforeValue, _maxEnergy));
+                if (_coroutines[(int)SliderType.PlayerEnergySlider] != null) StopCoroutine(_coroutines[(int)SliderType.PlayerEnergySlider]);
+                _coroutines[(int)SliderType.PlayerEnergySlider] = StartCoroutine(_gameController.UpdateSlider(SliderType.PlayerEnergySlider, _currentEnergy, beforeValue, _maxEnergy));
             }
         }
 

@@ -1,6 +1,12 @@
 ﻿using System.Collections;
 using UnityEngine;
 
+public enum TurretType
+{
+    RightTurret = 0,
+    LeftTurret = 1
+}
+
 public class TurretController : MonoBehaviour, IDamageable
 {
     // NOTE:タレットのパラメーターはボスのステータスを参照する
@@ -34,14 +40,19 @@ public class TurretController : MonoBehaviour, IDamageable
     private float _currentFireCooldown;
 
     //=================================== フィールド =====================================
+    [SerializeField] private TurretType _turretType;
+    [SerializeField] private SliderType _hpSliderType;
+    [SerializeField] private SliderType _energySliderType;
+
     [SerializeField] private GameController _gameController;
     [SerializeField] private BossController _bossController;
     [SerializeField] private BossDataSO _bossData;
+    [SerializeField] private GameObject _turretStand;// タレットの土台
     [SerializeField] private GameObject _turretHead; // タレットの頭部
     [SerializeField] private GameObject _turretMount;// 頭部の取付部位
 
     // SliderTypの容量に合わせる
-    private Coroutine[] _coroutines = new Coroutine[System.Enum.GetValues(typeof(SliderTyp)).Length];
+    private Coroutine[] _coroutines = new Coroutine[System.Enum.GetValues(typeof(SliderType)).Length];
     private Coroutine _reGenerateEnergy;
 
     [SerializeField] private float _rotationSpeed;      // 回転速度
@@ -128,8 +139,8 @@ public class TurretController : MonoBehaviour, IDamageable
             // 上下の回転処理
             if (upperDirection != Vector3.zero)
             {
-                Quaternion upperTargetRotation = Quaternion.Euler(Quaternion.LookRotation(upperDirection).eulerAngles.x, 0, 0);
-                _turretHead.transform.rotation = Quaternion.Slerp(_turretHead.transform.rotation, upperTargetRotation, _rotationSpeed * Time.deltaTime);
+                Quaternion targetLocalRot = Quaternion.LookRotation(upperDirection);
+                _turretHead.transform.localRotation = Quaternion.Euler(targetLocalRot.eulerAngles.x, 0, 0);
             }
 
             // 左右の回転処理
@@ -163,8 +174,8 @@ public class TurretController : MonoBehaviour, IDamageable
         if (_currentEnergy < 0) _currentEnergy = 0;
 
         // UIに反映
-        if (_coroutines[(int)SliderTyp.TurretEnergySlider] != null) StopCoroutine(_coroutines[(int)SliderTyp.TurretEnergySlider]);
-        _coroutines[(int)SliderTyp.TurretEnergySlider] = StartCoroutine(_gameController.UpdateSlider(SliderTyp.TurretEnergySlider, _currentEnergy, beforeValue, _maxEnergy));
+        if (_coroutines[(int)_energySliderType] != null) StopCoroutine(_coroutines[(int)_energySliderType]);
+        _coroutines[(int)_energySliderType] = StartCoroutine(_gameController.UpdateSlider(_energySliderType, _currentEnergy, beforeValue, _maxEnergy));
 
         // 攻撃はレイを飛ばす
         Ray ray = new Ray(_attackOrigin.position, _attackOrigin.forward);
@@ -211,8 +222,8 @@ public class TurretController : MonoBehaviour, IDamageable
                 _currentEnergy = Mathf.Min(_currentEnergy, _maxEnergy);
 
                 // UIに反映
-                if (_coroutines[(int)SliderTyp.TurretEnergySlider] != null) StopCoroutine(_coroutines[(int)SliderTyp.TurretEnergySlider]);
-                _coroutines[(int)SliderTyp.TurretEnergySlider] = StartCoroutine(_gameController.UpdateSlider(SliderTyp.TurretEnergySlider, _currentEnergy, beforeValue, _maxEnergy));
+                if (_coroutines[(int)_energySliderType] != null) StopCoroutine(_coroutines[(int)_energySliderType]);
+                _coroutines[(int)_energySliderType] = StartCoroutine(_gameController.UpdateSlider(_energySliderType, _currentEnergy, beforeValue, _maxEnergy));
             }
             
             yield return null;
@@ -260,12 +271,15 @@ public class TurretController : MonoBehaviour, IDamageable
         _currentHp = Mathf.Max(_currentHp, 0);
 
         // UIに反映
-        if (_coroutines[(int)SliderTyp.TurretHpSlider] != null) StopCoroutine(_coroutines[(int)SliderTyp.TurretHpSlider]);
-        _coroutines[(int)SliderTyp.TurretHpSlider] = StartCoroutine(_gameController.UpdateSlider(SliderTyp.TurretHpSlider, _currentHp, beforeValue, _maxHp));
+        if (_coroutines[(int)_hpSliderType] != null) StopCoroutine(_coroutines[(int)_hpSliderType]);
+        _coroutines[(int)_hpSliderType] = StartCoroutine(_gameController.UpdateSlider(_hpSliderType, _currentHp, beforeValue, _maxHp));
 
         if (_currentHp <= 0)
         {
-            // 破壊する
+            // _turretStandにアタッチされてる爆破エフェクトを実行
+
+
+            // タレットを破壊
             BreakTurret();
         }
     }
@@ -273,13 +287,11 @@ public class TurretController : MonoBehaviour, IDamageable
     //=================================== 破壊処理 =====================================
     private void BreakTurret()
     {
-        this.gameObject.SetActive(false);
         _readyToFire = false;
+        this.gameObject.SetActive(false);
 
-        // 破損時、GameControllerに通信を送る
-
-
-        // エフェクト実行
+        // GameController側で処理を行う
+        _gameController.StartCoroutine(_gameController.ReGenerateTurretAsync(_turretType, _energySliderType));
     }
 
     //=================================== アニメーション処理 =====================================
@@ -334,9 +346,16 @@ public class TurretController : MonoBehaviour, IDamageable
         _currentFireCooldown = _maxFireCooldown;
         
         Debug.Log("タレット：起動準備完了！");
-        Debug.Log("エネルギー充填開始！");
 
         if (_reGenerateEnergy != null) StopCoroutine(_reGenerateEnergy);
         _reGenerateEnergy = StartCoroutine(ReGenerateEnergy());
+    }
+
+    /// <summary>
+    /// タレットを非表示にする
+    /// </summary>
+    public void TurretSetFalse()
+    {
+        this.gameObject.SetActive(false);
     }
 }

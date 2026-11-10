@@ -3,15 +3,17 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-public enum SliderTyp
+public enum SliderType
 {
-    // NOTE:配列（_slider）と順番を統一しろ！
+    // NOTE:配列（_slider）には、こいつと同じ順番で格納していく
     PlayerHpSlider = 0,
     PlayerEnergySlider = 1,
     PlayerStaminaSlider = 2,
     BossHpSlider = 3,
-    TurretHpSlider = 4,
-    TurretEnergySlider = 5,
+    TurretRightHpSlider = 4,
+    TurretRightEnergySlider = 5,
+    TurretLeftHpSlider = 6,
+    TurretLeftEnergySlider = 7,
 }
 
 public enum BattleResult
@@ -29,11 +31,9 @@ public class GameController : LoadingController
 
     [SerializeField] private Transform _itemsParent;
     [SerializeField] private List<GameObject> _items = new List<GameObject>();// プレファブ化されたアイテム
-    [SerializeField] private GameObject[] _turretStands = new GameObject[2];
-    [SerializeField] private GameObject[] _turrets = new GameObject[2];
-    [SerializeField] private Slider[] _slider = new Slider[6];// NOTE:SliderTypと同じ順番でスライダーを格納
-
-    private Coroutine _generateTurretAsync;
+    [SerializeField] private GameObject[] _turretStands = new GameObject[System.Enum.GetValues(typeof(TurretType)).Length];
+    [SerializeField] private TurretController[] _turretControllers = new TurretController[System.Enum.GetValues(typeof(TurretType)).Length];
+    [SerializeField] private Slider[] _sliders = new Slider[System.Enum.GetValues(typeof(SliderType)).Length];
 
     private int _difficultyType;
     private int _stageLevel;
@@ -41,8 +41,7 @@ public class GameController : LoadingController
     private float _itemsRotateSpeed = 2f;
     private float _itemSpawnInterval = 30;
     private float _itemSpawnTimer;
-    private float _turretSpawnInterval = 60;
-    private float _turretSpawnTimer;
+    private float _turretReGenerateInterval = 60;
 
     // アイテム生成可能範囲
     [SerializeField] private Transform _minSpawnPosX;
@@ -84,9 +83,6 @@ public class GameController : LoadingController
     {
         // アイテム生成
         GenerateItem();
-
-        // タレット生成
-        GenerateTurret();
     }
 
     //=================================== 初期処理 =====================================
@@ -145,9 +141,10 @@ public class GameController : LoadingController
         if (_maxSpawnPosZ != null) _maxSpawnPosZ.gameObject.SetActive(false);
 
         // タレット
-        foreach (GameObject turret in _turrets)
+        foreach (var controller in _turretControllers)
         {
-            if (turret != null) turret.SetActive(false);
+            if (controller == null) continue;
+            controller.TurretSetFalse();
         }
     }
 
@@ -155,14 +152,14 @@ public class GameController : LoadingController
     /// <summary>
     /// 状態をスライダーに反映する
     /// </summary>
-    public IEnumerator UpdateSlider(SliderTyp sliderTyp, int currentValue, int beforeValue, int maxValue)
+    public IEnumerator UpdateSlider(SliderType sliderTyp, int currentValue, int beforeValue, int maxValue)
     {
-        if (_slider == null) yield break;
+        if (_sliders == null) yield break;
         int index = (int)sliderTyp;
 
         // 配列の範囲チェック
-        if (index < 0 || index >= _slider.Length) yield break;
-        Slider slider = _slider[index];
+        if (index < 0 || index >= _sliders.Length) yield break;
+        UnityEngine.UI.Slider slider = _sliders[index];
 
         // Sliderと最大値のチェック
         if (!slider || maxValue <= 0) yield break;
@@ -236,24 +233,35 @@ public class GameController : LoadingController
         }
     }
 
-    // タレット生成
-    private void GenerateTurret()
+    /// <summary>
+    /// 破壊されたタレットを再生する
+    /// ReGenerateTurretAsync(TurretType turretType, SliderType energySliderType)
+    /// TurretRightEnergySlider = 5
+    /// TurretLeftEnergySlider = 7
+    /// </summary>
+    public IEnumerator ReGenerateTurretAsync(TurretType turretType, SliderType energySliderType)
     {
-        if (_difficultyType <= 10 || _gameSet) return;
+        int index = (int)turretType;
 
-        _turretSpawnTimer += Time.deltaTime;
-        if (_turretSpawnTimer < _turretSpawnInterval) return;
+        if (index < 0 || index >= _turretControllers.Length)
+            yield break;
 
-        _turretSpawnTimer = 0;
+        float turretReGenerateTimer = 0;
 
-        // タレットを生成
-        if (_generateTurretAsync != null) StopCoroutine(_generateTurretAsync);
-        _generateTurretAsync = StartCoroutine(GenerateTurretAsync());
-    }
+        // typeでインデックスを指定する
+        // 破壊されたタレット別でタイマーを走らせる
+        while (turretReGenerateTimer < _turretReGenerateInterval)
+        {
+            turretReGenerateTimer += Time.deltaTime;
+            yield return null;
+        }
 
-    private IEnumerator GenerateTurretAsync()
-    {
-        yield return null;
+        // クールタイムを切ったら TurretController側にある生成用コルーチンを実行する
+        if (_turretControllers[index] != null)
+        {
+            _sliders[(int)energySliderType].value = 0;
+            StartCoroutine(_turretControllers[index].GenerateTurretAsync());
+        }
     }
 
     //=================================== バトル開始・終了処理 =====================================

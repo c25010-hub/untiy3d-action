@@ -40,7 +40,7 @@ public class BossController : MonoBehaviour, IDamageable
     public Transform PlayerTransform => _playerTransform;
 
     // SliderTypの容量に合わせる
-    private Coroutine[] _coroutines = new Coroutine[System.Enum.GetValues(typeof(SliderTyp)).Length];
+    private Coroutine[] _coroutines = new Coroutine[System.Enum.GetValues(typeof(SliderType)).Length];
 
     private void Awake()
     {
