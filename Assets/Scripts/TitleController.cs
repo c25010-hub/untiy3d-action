@@ -15,14 +15,11 @@ public class TitleController : LoadingController
     [SerializeField] private Button _startButton;
     [SerializeField] private TextMeshProUGUI _startButtonText;
 
-    private void Awake()
+    void Start()
     {
         // ロード画面の初期化
         SetLoadingCanvas();
-    }
 
-    void Start()
-    {
         // Titleシーンで使う音声を読み込む
         LoadAudio();
 

@@ -101,18 +101,18 @@ public class HomeController : LoadingController
 
     private void Awake()
     {
-        // ロード画面の初期化
-        SetLoadingCanvas();
-
-        // フェードアウト
-        StartCoroutine(LoadScene("", LoadState.Unload));
-        
         // 基礎ステータスを格納する
         SetBaseStatus();
     }
 
     void Start()
     {
+        // ロード画面の初期化
+        SetLoadingCanvas();
+
+        // フェードアウト
+        StartCoroutine(LoadScene("", LoadState.Unload));
+
         // Homeシーンで使う音声を読み込む
         LoadAudio();
 

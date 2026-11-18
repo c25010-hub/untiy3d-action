@@ -60,6 +60,7 @@ public class TurretController : MonoBehaviour, IDamageable
     [SerializeField] private GameObject _turretMount;// 頭部の取付部位
     [SerializeField] private GameObject[] _muzzles = new GameObject[4];
     [SerializeField] private Image _turretSliders;
+    [SerializeField] private Collider _turretCollider;
 
     [SerializeField] private LineRenderer[] _laserGlowLines = new LineRenderer[4];
     [SerializeField] private LineRenderer[] _laserCoreLines = new LineRenderer[4];
@@ -67,19 +68,21 @@ public class TurretController : MonoBehaviour, IDamageable
     // SliderTypの容量に合わせる
     private Coroutine[] _coroutines = new Coroutine[System.Enum.GetValues(typeof(SliderType)).Length];
     private Coroutine _reGenerateEnergy, _generateTurretAsync;
+    
 
     private float _rotationSpeed  = 10;    // 回転速度
     private float _firstShotMultiplier = 1;// ダメージ倍率
     private float _laserSpeed = 20f;       // レーザーの速度
 
     private float[] _traveledDistances = new float[4];
-    private float _gunfireRange = 5f;
+    private float _gunfireRange = 10f;
     private float _energyRegenerationDelay = 5f;
     private float _turretReGenerationDelay = 10f;
-    private int _stageLevel;
 
+    private int _stageLevel;
     private int _shotCost = 20;
     private int _energyReGenerateAmount = 5;
+    
 
     private bool _readyToFire = false;
     private bool _startCooldown = true;
@@ -116,14 +119,14 @@ public class TurretController : MonoBehaviour, IDamageable
         int _stageLevel = PlayerPrefs.GetInt("StageLevel", 10);
         float _stageLevelMultiplier = PlayerPrefs.GetFloat("StageLevelMultiplier", 0.2f);
 
-        int _baseHp = _bossData.BaseHp / 5;
-        int _baseAtk = _bossData.BaseAtk / 5;
-        int _baseDef = _bossData.BaseDef / 5;
+        int _baseHp = _bossData.BaseHp / 7;
+        int _baseAtk = _bossData.BaseAtk / 10;
+        int _baseDef = _bossData.BaseDef / 4;
 
         float _basePhysResist = _bossData.BasePhysResist / 2;    // 物理耐性
         float _baseEnergyResist = _bossData.BaseEnergyResist / 2;// エネルギー耐性
-        float _baseCritRate = _bossData.BaseCritRate / 2;
-        float _baseCritDamage = _bossData.BaseCritDamage / 2;
+        float _baseCritRate = 0f;
+        float _baseCritDamage = 0f;
 
         // 累乗倍率
         float _bossStatusExponent = _bossData.StatusExponent; // ステータスを累乗する値
@@ -451,8 +454,10 @@ public class TurretController : MonoBehaviour, IDamageable
     private void BreakTurret()
     {
         _turretSliders.gameObject.SetActive(false);
+        _turretCollider.enabled = false;
         _readyToFire = false;
         this.gameObject.SetActive(false);
+
 
         _gameController.StartCoroutine(ReGenerateTurret(_turretType, _energySliderType));
     }
@@ -473,25 +478,34 @@ public class TurretController : MonoBehaviour, IDamageable
         // クールタイムを切ったら TurretController側にある生成用コルーチンを実行する
 
         if (_generateTurretAsync != null) StopCoroutine(_generateTurretAsync);
-            _generateTurretAsync = StartCoroutine(GenerateTurretAsync());
+            _generateTurretAsync = _gameController.StartCoroutine(GenerateTurretAsync());
     }
 
     //=================================== アニメーション処理 =====================================
+
+
     /// <summary>
     /// タレット生成時のアニメーション処理（実行は GameController側で行う！）
     /// </summary>
     public IEnumerator GenerateTurretAsync()
     {
-        _currentEnergy = 1;
-        _currentFireCooldown = _maxFireCooldown;
-        _gameController.SliderToOnePercent(_energySliderType, _maxEnergy);
-
         _turretSliders.gameObject.SetActive(true);
+
+        // HP回復
+        _currentHp = _maxHp;
+        if (_coroutines[(int)_hpSliderType] != null) StopCoroutine(_coroutines[(int)_hpSliderType]);
+        _coroutines[(int)_hpSliderType] = _gameController.StartCoroutine(_gameController.UpdateSlider(_hpSliderType, _currentHp, 1, _maxHp));
+
+        // エネルギー充填
+        _currentEnergy = 1;
+        if (_coroutines[(int)_energySliderType] != null) StopCoroutine(_coroutines[(int)_energySliderType]);
+        _coroutines[(int)_energySliderType] = _gameController.StartCoroutine(_gameController.UpdateSlider(_energySliderType, _currentEnergy, 1, _maxEnergy));
 
         float duration = 0.5f;
         float elapsedTime = 0f;
 
         _readyToFire = false;
+        _currentFireCooldown = _maxFireCooldown;
 
         this.gameObject.SetActive(true);
 
@@ -531,8 +545,10 @@ public class TurretController : MonoBehaviour, IDamageable
 
         _turretHead.transform.localRotation = targetRot;
 
-        Debug.Log("タレット：起動準備完了！");
+        Debug.Log("タレット：設置完了！");
+        _turretCollider.enabled = true;
 
+        // エネルギー充填
         if (_reGenerateEnergy != null) StopCoroutine(_reGenerateEnergy);
         _reGenerateEnergy = StartCoroutine(ReGenerateEnergy(CallType.Performance));
     }

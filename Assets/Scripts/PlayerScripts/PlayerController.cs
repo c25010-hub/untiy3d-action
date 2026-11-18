@@ -2,7 +2,6 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using Unity.VisualScripting;
 
 public class PlayerController : MonoBehaviour, IDamageable
 {
@@ -47,13 +46,14 @@ public class PlayerController : MonoBehaviour, IDamageable
     [SerializeField] private GameController _gameController;
     [SerializeField] private CameraController _cameraController;
     [SerializeField] private PlayerDataSO _playerData;
+    [SerializeField] private GameObject _sword;
     [SerializeField] private GameObject[] _guns = new GameObject[2];
     [SerializeField] private AttackHitBox[] _hitBoxs = new AttackHitBox[3];
     [SerializeField] private CanvasGroup _staminaCanvasGroup;
 
     // SliderTypの容量に合わせる
     private Coroutine[] _coroutines = new Coroutine[System.Enum.GetValues(typeof(SliderType)).Length];
-    private Coroutine _rapidFireOn, _updatePlayerStamina, _regenerateStamina;
+   private Coroutine _rapidFireOn, _updatePlayerStamina, _regenerateStamina;
     private Camera _mainCamera;// 発砲時のRayの基準点になる
     private Rigidbody _playerRb;
     private Animator _playerAnim;
@@ -74,22 +74,22 @@ public class PlayerController : MonoBehaviour, IDamageable
     private float _playerRotateSpeed = 10.0f;
     private float _playerSpeed = 2.0f;
 
-    private bool _switchToShootingMode = false;
+    private bool _gunFireMode = false;
     private bool _defeated = false;
-    private bool _shootingMode = false;
     private bool _startAttackTimer = false;
     private bool _avoidance = false;
     private bool _isAttacking = false;
 
     private void Awake()
     {
+        // ステータスを適用
         SetStats();
-        AttackColliderAllOff();
+    }
 
-        _staminaCanvasGroup.alpha = 0f;
-
-        foreach (var gun in _guns) if (gun != null) gun.gameObject.Serialize(false);
-        foreach (var hitBox in _hitBoxs) if (hitBox != null) hitBox.gameObject.Serialize(false);
+    private void Start()
+    {
+        // 透明化処理
+        HideObjects();
 
         int buffTypeCount = Enum.GetValues(typeof(BuffType)).Length;
         Buffs = new float[buffTypeCount];
@@ -161,12 +161,28 @@ public class PlayerController : MonoBehaviour, IDamageable
         _currentHp = _maxHp;
         _currentAtk = _maxAtk;
         _currentDef = _maxDef;
-        _currentEnergy = _maxEnergy;
+        //_currentEnergy = _maxEnergy;
         _currentStamina = _maxStamina;
         _currentPhysResist = _maxPhysResist;
         _currentEnergyResist = _maxEnergyResist;
         _currentCritRate = _maxCritRate;
         _currentCritDamage = _maxCritDamage;
+
+        // HPをUIに反映する
+        int beforeValue = _currentHp;
+        _coroutines[(int)SliderType.PlayerHpSlider] = StartCoroutine(_gameController.UpdateSlider(SliderType.PlayerHpSlider, _currentHp, beforeValue, _maxHp));
+
+        // エネルギー量をUIに反映する
+        beforeValue = _currentEnergy;
+        _coroutines[(int)SliderType.PlayerEnergySlider] = StartCoroutine(_gameController.UpdateSlider(SliderType.PlayerEnergySlider, _currentEnergy, beforeValue, _maxEnergy));
+    }
+
+    private void HideObjects()
+    {
+        // 非アクティブ化処理
+        foreach (var gun in _guns) if (gun != null) gun.gameObject.SetActive(false);
+        _staminaCanvasGroup.alpha = 0f;
+        AttackColliderAllOff();
     }
 
     //=================================== イベント関数 =====================================
@@ -176,7 +192,7 @@ public class PlayerController : MonoBehaviour, IDamageable
     /// </summary>
     public void Attack1()
     {
-        if (_avoidance || _shootingMode || _defeated) return;
+        if (_avoidance || _gunFireMode || _defeated) return;
 
         _hitBoxs[0].HitBoxOn();
     }
@@ -187,7 +203,7 @@ public class PlayerController : MonoBehaviour, IDamageable
     /// </summary>
     public void Attack2()
     {
-        if (_avoidance || _shootingMode || _defeated) return;
+        if (_avoidance || _gunFireMode || _defeated) return;
 
         _hitBoxs[1].HitBoxOn();
     }
@@ -198,7 +214,7 @@ public class PlayerController : MonoBehaviour, IDamageable
     /// </summary>
     public void Attack3()
     {
-        if (_avoidance || _shootingMode || _defeated) return;
+        if (_avoidance || _gunFireMode || _defeated) return;
 
         _hitBoxs[2].HitBoxOn();
     }
@@ -273,11 +289,11 @@ public class PlayerController : MonoBehaviour, IDamageable
         _isAttacking = false;
     }
 
-    //=================================== プレイヤーの動作制御 =====================================
+    //=================================== プレイヤーの移動制御 =====================================
     // 移動制御
     private void MovePlayer()
     {
-        if (_isAttacking || _shootingMode || _defeated || _avoidance) return;
+        if (_isAttacking || _gunFireMode || _defeated || _avoidance) return;
 
         float t = Time.deltaTime;
         float horizontal = Input.GetAxisRaw("Horizontal");
@@ -333,10 +349,13 @@ public class PlayerController : MonoBehaviour, IDamageable
                 }
 
                 // 銃撃処理を中断
-                if (_rapidFireOn != null || _shootingMode)
+                if (_gunFireMode)
                 {
-                    StopCoroutine(_rapidFireOn);
-                    _rapidFireOn = null;
+                    if (_rapidFireOn != null)
+                    {
+                        StopCoroutine(_rapidFireOn);
+                        _rapidFireOn = null;
+                    }
 
                     RapidFireOff();
                 }
@@ -400,11 +419,12 @@ public class PlayerController : MonoBehaviour, IDamageable
         _staminaCanvasGroup.alpha = 0f;
     }
 
+    //=================================== プレイヤーの攻撃制御 =====================================
     // 通常攻撃処理
     private void PlayerAttack()
     {
         // 銃撃モードの時、通常攻撃を無視
-        if (_shootingMode) return;
+        if (_gunFireMode) return;
         // 回避中は、通常攻撃を無視
         if (_avoidance) return;
         // マウスが接続されてるか確認
@@ -459,25 +479,25 @@ public class PlayerController : MonoBehaviour, IDamageable
     private void SwitchToShootingMode()
     {
         // 銃撃可能か確認
-        if (!_switchToShootingMode) return;
+        if (_currentEnergy < _maxEnergy) return;
         if (_avoidance || _isAttacking) return;
 
         if (Input.GetKeyDown(KeyCode.Q))
         {
-            // 移動を強制的に止める
+            // 一瞬移動を強制的に止める
             StopMovement();
-            _switchToShootingMode = false;
+
+            _currentEnergy -= 1;
 
             // 銃撃モード ON
-            if (_rapidFireOn != null) StopCoroutine(_rapidFireOn);
-            _rapidFireOn = StartCoroutine(RapidFireOn());
+            RapidFireOn();
         }
     }
 
     // 銃撃処理
     private void RapidFire()
     {
-        if (!_shootingMode) return;
+        if (!_gunFireMode) return;
 
         // カメラをマウスで動かす処理
         _cameraController.MoveCamera();
@@ -512,37 +532,40 @@ public class PlayerController : MonoBehaviour, IDamageable
 
     //=================================== 銃撃開始・終了アクション =====================================
     // 開始演出
-    private IEnumerator RapidFireOn()
+    private void RapidFireOn()
     {
-        // 一人称視点に切り替えて、UIを開く
-        _cameraController.ChangeToFirstPerson();
+        // 武器を切り替える
+        _sword.gameObject.SetActive(false);
+        foreach (var gun in _guns) gun.gameObject.SetActive(true);
+
+        // 一人称視点に切り替える
+        _cameraController.ChangeToSubCamera();
 
         // 銃撃開始モーション
         _playerAnim.SetTrigger("FireOn");
-
-        // _cameraController側の準備が整うまで、銃撃モードには入れない
-        yield return new WaitUntil(() => _cameraController.ReadyToFire == true);
 
         // スローモーション ON
         Time.timeScale = 0.1f;
         _shootingTimer = _shootingCooldown;
 
         // 銃撃開始
-        _shootingMode = true;
+        _gunFireMode = true;
         _rapidFireOn = null;
     }
 
     // 銃撃終了
     private void  RapidFireOff()
     {
-        // レイヤー0（Base Layer）の現在のアニメーション情報を取得
-        AnimatorStateInfo stateInfo = _playerAnim.GetCurrentAnimatorStateInfo(0);
-        if (!stateInfo.IsName("Dodge")) _playerAnim.SetTrigger("FireOff");
+        // 武器を切り替える
+        _sword.gameObject.SetActive(true);
+        foreach (var gun in _guns) gun.gameObject.SetActive(false);
 
-        _shootingMode = false;// 銃撃停止
+        _gunFireMode = false;// 銃撃停止
+
         Time.timeScale = 1.0f;// スローモーション OFF
-        
-        _cameraController.ChangeToThirdPerson();// 三人称視点に戻して、UIを閉じる
+
+        // 三人称視点に戻す
+        _cameraController.ChangeToMainCamera();
     }
 
     //=================================== ダメージ計処理・取得処理 =====================================
@@ -604,7 +627,7 @@ public class PlayerController : MonoBehaviour, IDamageable
         _gameController.GameSet(BattleResult.Lose);// GameControllerに通知を出す
     }
 
-    //=================================== 回復・バフ処理 =====================================
+    //=================================== バフ処理 =====================================
     /// <summary>
     /// 回復を受け取る関数
     /// </summary>
@@ -635,25 +658,6 @@ public class PlayerController : MonoBehaviour, IDamageable
                 _coroutines[(int)SliderType.PlayerEnergySlider] = StartCoroutine(_gameController.UpdateSlider(SliderType.PlayerEnergySlider, _currentEnergy, beforeValue, _maxEnergy));
                 break;
         }
-    }
-
-    /// <summary>
-    /// エネルギー回復
-    /// </summary>
-    public void ChargeEnergy(HitBoxType type)
-    {
-        int beforeValue = _currentEnergy;
-
-        // エネルギー回復
-        if (_currentEnergy < _maxEnergy) _currentEnergy += 5 * (1 + (int)type);
-        // 超過分を割く
-        if (_currentEnergy > _maxEnergy) _currentEnergy = _maxEnergy;
-        // 銃撃許可
-        if (_currentEnergy == _maxEnergy) _switchToShootingMode = true;
-
-        // エネルギー回復量を UI に反映（GameController に通知を出す）
-        if (_coroutines[(int)SliderType.PlayerEnergySlider] != null) StopCoroutine(_coroutines[(int)SliderType.PlayerEnergySlider]);
-        _coroutines[(int)SliderType.PlayerEnergySlider] = StartCoroutine(_gameController.UpdateSlider(SliderType.PlayerEnergySlider, _currentEnergy, beforeValue, _maxEnergy));
     }
 
     /// <summary>
@@ -699,6 +703,23 @@ public class PlayerController : MonoBehaviour, IDamageable
 
         BuffStacks[(int)type]--;
         Buffs[(int)type] -= amount;
+    }
+    
+    /// <summary>
+    /// エネルギー回復
+    /// </summary>
+    public void ChargeEnergy(HitBoxType type)
+    {
+        int beforeValue = _currentEnergy;
+
+        // エネルギー回復
+        if (_currentEnergy < _maxEnergy) _currentEnergy += 5 * (1 + (int)type);
+        // 超過分を割く
+        if (_currentEnergy > _maxEnergy) _currentEnergy = _maxEnergy;
+
+        // エネルギー回復量を UI に反映（GameController に通知を出す）
+        if (_coroutines[(int)SliderType.PlayerEnergySlider] != null) StopCoroutine(_coroutines[(int)SliderType.PlayerEnergySlider]);
+        _coroutines[(int)SliderType.PlayerEnergySlider] = StartCoroutine(_gameController.UpdateSlider(SliderType.PlayerEnergySlider, _currentEnergy, beforeValue, _maxEnergy));
     }
 
     //=================================== 当たり判定処理 =====================================

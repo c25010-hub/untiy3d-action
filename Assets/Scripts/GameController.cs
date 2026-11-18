@@ -36,8 +36,7 @@ public class GameController : LoadingController
     [SerializeField] private Slider[] _sliders = new Slider[System.Enum.GetValues(typeof(SliderType)).Length];
     [SerializeField] private Image _staminaBackground;
     [SerializeField] private Image _staminaFillArea;
-    //[SerializeField] private TextMeshProUGUI[] _sliderValueTexts = new TextMeshProUGUI[System.Enum.GetValues(typeof(SliderType)).Length];
-    //[SerializeField] private TextMeshProUGUI _staminaValueText;
+    [SerializeField] private TextMeshProUGUI[] _sliderValueTexts = new TextMeshProUGUI[System.Enum.GetValues(typeof(SliderType)).Length];
 
     private int _difficultyType;
     private int _stageLevel;
@@ -58,16 +57,16 @@ public class GameController : LoadingController
     {
         _difficultyType = PlayerPrefs.GetInt("DifficultyType", 0);
         _stageLevel = PlayerPrefs.GetInt("StageLevel", 10);
+    }
 
+    void Start()
+    {
         // ステージに難易度を適用する
         SetBattleScene();
 
         // ロード画面の初期化
         SetLoadingCanvas();
-    }
 
-    void Start()
-    {
         // フェードアウト
         StartCoroutine(LoadScene("", LoadState.Unload));
 
@@ -162,6 +161,7 @@ public class GameController : LoadingController
         // 配列の範囲チェック
         if (index < 0 || index >= _sliders.Length) yield break;
         Slider slider = _sliders[index];
+        TextMeshProUGUI valueText = _sliderValueTexts[index];
 
         // Sliderと最大値のチェック
         if (!slider || maxValue <= 0) yield break;
@@ -178,6 +178,7 @@ public class GameController : LoadingController
 
             float t = elapsedTime / duration;
             slider.value = Mathf.SmoothStep(start, target, t);
+            valueText.SetText("{0:0}%", slider.value * 100f);
 
             yield return null;
         }
@@ -225,7 +226,7 @@ public class GameController : LoadingController
         slider.value = 1 / maxValue;
     }
 
-    //=================================== 生成処理 =====================================
+    //=================================== アイテム生成処理 =====================================
     // アイテム生成
     private void GenerateItem()
     {

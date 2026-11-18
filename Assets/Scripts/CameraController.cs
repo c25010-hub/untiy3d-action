@@ -2,30 +2,27 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+public enum CameraType
+{
+    MainCamera = 0,
+    SubCamera = 1
+}
+
 public enum CameraPosType
 {
-    _firstPerson = 0,
-    _thirdPerson = 1,
-    _orthographic = 2
+    ThirdPerson = 0,
+    Orthographic = 1
 }
 
 public class CameraController : MonoBehaviour
 {
-    // 移動
-    private Vector3[] _cameraPositions = new Vector3[3]
-    {
-        new Vector3(0f, 0.521f, -0.048f),// 一人称
-        new Vector3(0f, 1.6f, -2.07f),// 三人称
-        new Vector3(0f, 2f, 0.4f) // 平行投影
-    };
+    [SerializeField] private Camera _mainCamera, _subCamera;
 
-    // 回転
-    private Quaternion[] _cameraRotations = new Quaternion[3]
-    {
-        Quaternion.Euler(0f, 0f, 0f),// 一人称
-        Quaternion.Euler(20.053f, 0f, 0f),// 三人称
-        Quaternion.Euler(90f, 0f, 0f) // 平行投影（scale:1.5）
-    };
+    // 位置
+    private Vector3[] _cameraPositions = new Vector3[System.Enum.GetValues(typeof(CameraPosType)).Length];
+
+    // 角度
+    private Quaternion[] _cameraRotations = new Quaternion[System.Enum.GetValues(typeof(CameraPosType)).Length];
 
     private Coroutine _changeCameraPos;
 
@@ -40,32 +37,75 @@ public class CameraController : MonoBehaviour
     private float _maxYaw = 45.0f;  // 右を向ける限界角度（正面が0度）
     private float _rotationY = 0.0f;// 現在の左右の回転角を記録する変数
 
-    private bool _readyToFire = false;
-    public bool ReadyToFire => _readyToFire;
+    private void Awake()
+    {
+        // 位置
+        _cameraPositions[(int)CameraPosType.ThirdPerson] = new Vector3(0f, 2.17f, -1.75f);// 三人称
+        _cameraPositions[(int)CameraPosType.Orthographic] = new Vector3(0f, 2f, 0.4f);   // 平行投影
+
+        // 角度
+        _cameraRotations[(int)CameraPosType.ThirdPerson] = Quaternion.Euler(28.954f, 0f, 0f);// 三人称
+        _cameraRotations[(int)CameraPosType.Orthographic] = Quaternion.Euler(90f, 0f, 0f);   // 平行投影（scale:1.5）
+    }
+
+    //=================================== カメラの変更処理 =====================================
+    /// <summary>
+    /// メインカメラに変更（一人称視点）
+    /// </summary>
+    public void ChangeToMainCamera() => ChangeCamera(CameraType.MainCamera);
+
+    /// <summary>
+    /// サブカメラに変更（三人称視点）
+    /// </summary>
+    public void ChangeToSubCamera() => ChangeCamera(CameraType.SubCamera);
+
+    // カメラ変更処理
+    private void ChangeCamera(CameraType type)
+    {
+        switch (type)
+        {
+            case CameraType.MainCamera:
+                Debug.Log("メインカメラに変更：通常状態");
+
+                _mainCamera.depth = 1;
+                _subCamera.depth = 0;
+
+                // UI制御はGameControllerで行う
+
+                break;
+
+            case CameraType.SubCamera:
+                Debug.Log("サブカメラに変更：銃撃状態");
+
+                _mainCamera.depth = 0;
+                _subCamera.depth = 1;
+
+                // UI制御はGameControllerで行う
+
+                break;
+
+            default:
+                Debug.Log("太陽するカメラが存在しません。");
+                break;
+        }
+    }
 
     //=================================== カメラの視点変換処理 =====================================
     /// <summary>
-    /// 一人称視点（こいつの場合だけ UI も同時に動かす）
+    /// メインカメラを動かす（三人称視点）
     /// </summary>
-    public void ChangeToFirstPerson() => TriggerCameraChange(CameraPosType._firstPerson);
+    public void ChangeToThirdPerson() => TriggerCameraChange(CameraPosType.ThirdPerson);
 
     /// <summary>
-    /// 三人称視点
+    /// メインカメラを動かす（平行投影モード）
     /// </summary>
-    public void ChangeToThirdPerson() => TriggerCameraChange(CameraPosType._thirdPerson);
-
-    /// <summary>
-    /// 平行投影（上から見下ろす）
-    /// </summary>
-    public void ChangeToOrthographic() => TriggerCameraChange(CameraPosType._orthographic);
+    public void ChangeToOrthographic() => TriggerCameraChange(CameraPosType.Orthographic);
 
     // 視点変更処理を実行
     private void TriggerCameraChange(CameraPosType type)
     {
         if (_changeCameraPos != null) StopCoroutine(_changeCameraPos);
         _changeCameraPos = StartCoroutine(ChangeCameraPos(type));
-
-        _readyToFire = false;
     }
 
     // 視点変更処理
@@ -74,8 +114,8 @@ public class CameraController : MonoBehaviour
         int index = (int)cameraPosType;
 
         // スタート時の位置・角度
-        Vector3 startPos = this.gameObject.transform.position;
-        Quaternion startRot = this.gameObject.transform.rotation;
+        Vector3 startPos = _mainCamera.transform.position;
+        Quaternion startRot = _mainCamera.transform.rotation;
 
         // ゴール（目標）の位置・角度
         Vector3 targetPos = _cameraPositions[index];
@@ -90,26 +130,18 @@ public class CameraController : MonoBehaviour
             float t = elapsedTime / _transitionDuration;
 
             // 位置と角度を線形補間（Lerp）
-            this.gameObject.transform.position = Vector3.Lerp(startPos, targetPos, t);
-            this.gameObject.transform.rotation = Quaternion.Lerp(startRot, targetRot, t);
-
-            // 一人称視点の場合、UIも同時に開く
-            if (cameraPosType == CameraPosType._firstPerson)
-            {
-                // 射撃準備完了！
-                _readyToFire = true;
-            }
+            _mainCamera.transform.position = Vector3.Lerp(startPos, targetPos, t);
+            _mainCamera.transform.rotation = Quaternion.Lerp(startRot, targetRot, t);
 
             yield return null;
         }
 
         // 最後に完全に目標値に一致させる（ズレ防止）
-        this.gameObject.transform.position = targetPos;
-        this.gameObject.transform.rotation = targetRot;
+        _mainCamera.transform.position = targetPos;
+        _mainCamera.transform.rotation = targetRot;
 
         // コルーチン終了時に初期化
         _changeCameraPos = null;
-        _readyToFire = false;
     }
 
     //=================================== マウス制御 =====================================
@@ -132,6 +164,6 @@ public class CameraController : MonoBehaviour
         _rotationX -= mouseY; // マウスを上に動かす(プラス)と、カメラは上を向く(マイナス回転)ため減算
         _rotationX = Mathf.Clamp(_rotationX, _minPitch, _maxPitch);
 
-        this.transform.eulerAngles = new Vector3(_rotationX, _rotationY, 0.0f);
+        _subCamera.transform.eulerAngles = new Vector3(_rotationX, _rotationY, 0.0f);
     }
 }
