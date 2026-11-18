@@ -32,7 +32,6 @@ public class HomeController : LoadingController
     private float _playerStatusExponent; // ステータスを累乗する値
 
     // 計算結果
-
     private int _playerResultHp;
     private int _playerResultAtk;
     private int _playerResultDef;
@@ -41,7 +40,6 @@ public class HomeController : LoadingController
 
     private float _playerResultPhysResist;
     private float _playerResultEnergyResist;
-
     private float _playerResultCritRate;
     private float _playerResultCritDamage;
 
@@ -69,7 +67,6 @@ public class HomeController : LoadingController
 
     private float _bossResultPhysResist;
     private float _bossResultEnergyResist;
-
     private float _bossResultCritRate;
     private float _bossResultCritDamage;
 

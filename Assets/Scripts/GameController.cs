@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -8,12 +9,11 @@ public enum SliderType
     // NOTE:配列（_slider）には、こいつと同じ順番で格納していく
     PlayerHpSlider = 0,
     PlayerEnergySlider = 1,
-    PlayerStaminaSlider = 2,
-    BossHpSlider = 3,
-    TurretRightHpSlider = 4,
-    TurretRightEnergySlider = 5,
-    TurretLeftHpSlider = 6,
-    TurretLeftEnergySlider = 7,
+    BossHpSlider = 2,
+    TurretLeftHpSlider = 3,
+    TurretLeftEnergySlider = 4,
+    TurretRightHpSlider = 5,
+    TurretRightEnergySlider = 6,
 }
 
 public enum BattleResult
@@ -34,6 +34,10 @@ public class GameController : LoadingController
     [SerializeField] private GameObject[] _turretStands = new GameObject[System.Enum.GetValues(typeof(TurretType)).Length];
     [SerializeField] private TurretController[] _turretControllers = new TurretController[System.Enum.GetValues(typeof(TurretType)).Length];
     [SerializeField] private Slider[] _sliders = new Slider[System.Enum.GetValues(typeof(SliderType)).Length];
+    [SerializeField] private Image _staminaBackground;
+    [SerializeField] private Image _staminaFillArea;
+    //[SerializeField] private TextMeshProUGUI[] _sliderValueTexts = new TextMeshProUGUI[System.Enum.GetValues(typeof(SliderType)).Length];
+    //[SerializeField] private TextMeshProUGUI _staminaValueText;
 
     private int _difficultyType;
     private int _stageLevel;
@@ -41,12 +45,10 @@ public class GameController : LoadingController
     private float _itemsRotateSpeed = 2f;
     private float _itemSpawnInterval = 30;
     private float _itemSpawnTimer;
-    private float _turretReGenerateInterval = 60;
 
     // アイテム生成可能範囲
     [SerializeField] private Transform _minSpawnPosX;
     [SerializeField] private Transform _maxSpawnPosX;
-
     [SerializeField] private Transform _minSpawnPosZ;
     [SerializeField] private Transform _maxSpawnPosZ;
 
@@ -77,6 +79,9 @@ public class GameController : LoadingController
 
         // 不要なアイテムを非表示
         HideObjects();
+
+        // ゲーム開始演出
+        StartCoroutine(GameStart());
     }
 
     void Update()
@@ -91,29 +96,26 @@ public class GameController : LoadingController
     {
 
     }
-    
-    // ステージに難易度を適用する
+
+    // ステージの状況を選択した項目に合わせる
     private void SetBattleScene()
     {
-        // タレットスタンドにマテリアルを適用
-        if (_stageLevel > 10)
+        switch (_stageLevel)
         {
-            Material newMaterial = Resources.Load<Material>("Materials/Unit_Selection_v1");
+            case 10:
+                Debug.Log($"ステージLv：{_stageLevel}");
+                ; break;
 
-            if (newMaterial != null)
-            {
-                for (int i = 0; i < _turretStands.Length; i++)
-                {
-                    if (_turretStands[i] == null) continue;
+            case 50:
+                Debug.Log($"ステージLv：{_stageLevel}");
+                ; break;
 
-                    // マテリアルをリソースフォルダから適用
-                    if (_turretStands[i].TryGetComponent<Renderer>(out var renderer))
-                    {
-                        renderer.material = newMaterial;
-                    }
-                }
-            }
-            else Debug.LogError("リソースフォルダからマテリアルの読み込みに失敗しました。");
+            case 100:
+                Debug.Log($"ステージLv：{_stageLevel}");
+                ; break;
+            default:
+                Debug.LogError("選択した難易度が適用しません");
+                break;
         }
     }
 
@@ -148,7 +150,7 @@ public class GameController : LoadingController
         }
     }
 
-    //=================================== UI反映処理 =====================================
+    //=================================== スライダー処理・反映 =====================================
     /// <summary>
     /// 状態をスライダーに反映する
     /// </summary>
@@ -181,6 +183,46 @@ public class GameController : LoadingController
         }
 
         slider.value = target;
+    }
+
+    /// <summary>
+    /// プレイヤーのスタミナに反映する
+    /// </summary>
+    public IEnumerator UpdatePlayerStamina(int currentValue, int beforeValue, int maxValue)
+    {
+        if (_staminaFillArea == null) yield break;
+
+        float duration = 0.5f;
+        float elapsedTime = 0f;
+
+        float start = Mathf.Clamp01((float)beforeValue / maxValue);
+        float target = Mathf.Clamp01((float)currentValue / maxValue);
+
+        // スタミナを徐々に増減させる
+        while (elapsedTime < duration)
+        {
+            elapsedTime += Time.deltaTime;
+            float t = elapsedTime / duration;
+            _staminaFillArea.fillAmount = Mathf.SmoothStep(start, target, t);
+            yield return null;
+        }
+
+        _staminaFillArea.fillAmount = target;
+    }
+
+    /// <summary>
+    /// スライダーのvalueを1にする
+    /// </summary>
+    public void SliderToOnePercent(SliderType sliderTyp, int maxValue)
+    {
+        if (_sliders == null) return;
+        int index = (int)sliderTyp;
+
+        // 配列の範囲チェック
+        if (index < 0 || index >= _sliders.Length) return;
+        Slider slider = _sliders[index];
+
+        slider.value = 1 / maxValue;
     }
 
     //=================================== 生成処理 =====================================
@@ -233,38 +275,22 @@ public class GameController : LoadingController
         }
     }
 
-    /// <summary>
-    /// 破壊されたタレットを再生する
-    /// ReGenerateTurretAsync(TurretType turretType, SliderType energySliderType)
-    /// TurretRightEnergySlider = 5
-    /// TurretLeftEnergySlider = 7
-    /// </summary>
-    public IEnumerator ReGenerateTurretAsync(TurretType turretType, SliderType energySliderType)
-    {
-        int index = (int)turretType;
-
-        if (index < 0 || index >= _turretControllers.Length)
-            yield break;
-
-        float turretReGenerateTimer = 0;
-
-        // typeでインデックスを指定する
-        // 破壊されたタレット別でタイマーを走らせる
-        while (turretReGenerateTimer < _turretReGenerateInterval)
-        {
-            turretReGenerateTimer += Time.deltaTime;
-            yield return null;
-        }
-
-        // クールタイムを切ったら TurretController側にある生成用コルーチンを実行する
-        if (_turretControllers[index] != null)
-        {
-            _sliders[(int)energySliderType].value = 0;
-            StartCoroutine(_turretControllers[index].GenerateTurretAsync());
-        }
-    }
-
     //=================================== バトル開始・終了処理 =====================================
+    // 開始演出
+    public IEnumerator GameStart()
+    {
+        // タレットを両方生成
+        if (_stageLevel > 10)
+        {
+            foreach (var turretController in _turretControllers)
+            {
+                StartCoroutine(turretController.GenerateTurretAsync());
+            }
+        }
+
+        yield return null;
+    }
+    
     // 勝敗を受け取って、実行する処理を判断する
     public void GameSet(BattleResult result)
     {
@@ -273,14 +299,14 @@ public class GameController : LoadingController
         switch (result)
         {
             // 勝利
-            case BattleResult.Win: 
-                // 勝利時に処理
+            case BattleResult.Win:
+                Debug.Log("勝利！");
 
                 break;
             
             // 敗北
-            case BattleResult.Lose: 
-                // 敗北時の処理
+            case BattleResult.Lose:
+                Debug.Log("敗北...");
 
                 break;
         }

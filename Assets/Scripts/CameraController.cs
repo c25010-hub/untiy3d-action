@@ -14,17 +14,17 @@ public class CameraController : MonoBehaviour
     // 移動
     private Vector3[] _cameraPositions = new Vector3[3]
     {
-        new Vector3(0f, 0f, 0f),// 一人称
-        new Vector3(0f, 0f, 0f),// 三人称
-        new Vector3(0f, 0f, 0f) // 平行投影
+        new Vector3(0f, 0.521f, -0.048f),// 一人称
+        new Vector3(0f, 1.6f, -2.07f),// 三人称
+        new Vector3(0f, 2f, 0.4f) // 平行投影
     };
 
     // 回転
     private Quaternion[] _cameraRotations = new Quaternion[3]
     {
         Quaternion.Euler(0f, 0f, 0f),// 一人称
-        Quaternion.Euler(0f, 0f, 0f),// 三人称
-        Quaternion.Euler(0f, 0f, 0f) // 平行投影
+        Quaternion.Euler(20.053f, 0f, 0f),// 三人称
+        Quaternion.Euler(90f, 0f, 0f) // 平行投影（scale:1.5）
     };
 
     private Coroutine _changeCameraPos;
@@ -74,8 +74,8 @@ public class CameraController : MonoBehaviour
         int index = (int)cameraPosType;
 
         // スタート時の位置・角度
-        Vector3 startPos = this.gameObject.transform.localPosition;
-        Quaternion startRot = this.gameObject.transform.localRotation;
+        Vector3 startPos = this.gameObject.transform.position;
+        Quaternion startRot = this.gameObject.transform.rotation;
 
         // ゴール（目標）の位置・角度
         Vector3 targetPos = _cameraPositions[index];
@@ -90,8 +90,8 @@ public class CameraController : MonoBehaviour
             float t = elapsedTime / _transitionDuration;
 
             // 位置と角度を線形補間（Lerp）
-            this.gameObject.transform.localPosition = Vector3.Lerp(startPos, targetPos, t);
-            this.gameObject.transform.localRotation = Quaternion.Lerp(startRot, targetRot, t);
+            this.gameObject.transform.position = Vector3.Lerp(startPos, targetPos, t);
+            this.gameObject.transform.rotation = Quaternion.Lerp(startRot, targetRot, t);
 
             // 一人称視点の場合、UIも同時に開く
             if (cameraPosType == CameraPosType._firstPerson)
@@ -99,20 +99,17 @@ public class CameraController : MonoBehaviour
                 // 射撃準備完了！
                 _readyToFire = true;
             }
-            else
-            {
-
-            }
 
             yield return null;
         }
 
         // 最後に完全に目標値に一致させる（ズレ防止）
-        this.gameObject.transform.localPosition = targetPos;
-        this.gameObject.transform.localRotation = targetRot;
+        this.gameObject.transform.position = targetPos;
+        this.gameObject.transform.rotation = targetRot;
 
         // コルーチン終了時に初期化
         _changeCameraPos = null;
+        _readyToFire = false;
     }
 
     //=================================== マウス制御 =====================================
@@ -135,11 +132,6 @@ public class CameraController : MonoBehaviour
         _rotationX -= mouseY; // マウスを上に動かす(プラス)と、カメラは上を向く(マイナス回転)ため減算
         _rotationX = Mathf.Clamp(_rotationX, _minPitch, _maxPitch);
 
-        transform.localEulerAngles = new Vector3(_rotationX, _rotationY, 0.0f);
-    }
-
-    private void Update()
-    {
-        MoveCamera();
+        this.transform.eulerAngles = new Vector3(_rotationX, _rotationY, 0.0f);
     }
 }

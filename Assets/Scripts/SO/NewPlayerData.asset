@@ -13,13 +13,13 @@ MonoBehaviour:
   m_Name: NewPlayerData
   m_EditorClassIdentifier: Assembly-CSharp::PlayerDataSO
   _baseHp: 1060
-  _baseAtk: 220
-  _baseDef: 72
+  _baseAtk: 320
+  _baseDef: 62
   _baseEnergy: 100
   _baseStamina: 100
   _basePhysResist: 0.1
   _baseEnergyResist: 0.2
-  _baseCritRate: 0.05
+  _baseCritRate: 0.5
   _baseCritDamage: 0.5
   _hpBaseMultiplier: 1
   _atkBaseMultiplier: 1

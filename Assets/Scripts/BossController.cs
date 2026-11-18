@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections.Generic;
 
 public class BossController : MonoBehaviour, IDamageable
 {
@@ -38,6 +39,9 @@ public class BossController : MonoBehaviour, IDamageable
     [SerializeField] private BossDataSO _bossData;
     [SerializeField] private Transform _playerTransform;
     public Transform PlayerTransform => _playerTransform;
+
+    // 攻撃時の対象のID
+    private HashSet<int> _hitPlayer = new HashSet<int>();
 
     // SliderTypの容量に合わせる
     private Coroutine[] _coroutines = new Coroutine[System.Enum.GetValues(typeof(SliderType)).Length];
