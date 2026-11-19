@@ -16,18 +16,22 @@ public enum CameraPosType
 
 public class CameraController : MonoBehaviour
 {
+    [SerializeField] private Transform _playerTransform;
     [SerializeField] private Camera _mainCamera, _subCamera;
+
+    private Vector3 _offset;
+    private Vector3 _velocity;
 
     // 位置
     private Vector3[] _cameraPositions = new Vector3[System.Enum.GetValues(typeof(CameraPosType)).Length];
-
     // 角度
     private Quaternion[] _cameraRotations = new Quaternion[System.Enum.GetValues(typeof(CameraPosType)).Length];
 
     private Coroutine _changeCameraPos;
 
-    private float _transitionDuration = 0.5f;
+    [SerializeField] private float _smoothSpeed;
     [SerializeField] private float _mouseSensitivity;// マウス感度
+    private float _transitionDuration = 0.5f;
 
     private float _minPitch = -40.0f;// 下を向ける限界角度
     private float _maxPitch = 40.0f; // 上を向ける限界角度
@@ -40,12 +44,23 @@ public class CameraController : MonoBehaviour
     private void Awake()
     {
         // 位置
-        _cameraPositions[(int)CameraPosType.ThirdPerson] = new Vector3(0f, 2.17f, -1.75f);// 三人称
+        _cameraPositions[(int)CameraPosType.ThirdPerson] = new Vector3(0f, 2.31f, -2.08f);// 三人称
         _cameraPositions[(int)CameraPosType.Orthographic] = new Vector3(0f, 2f, 0.4f);   // 平行投影
 
         // 角度
         _cameraRotations[(int)CameraPosType.ThirdPerson] = Quaternion.Euler(28.954f, 0f, 0f);// 三人称
         _cameraRotations[(int)CameraPosType.Orthographic] = Quaternion.Euler(90f, 0f, 0f);   // 平行投影（scale:1.5）
+    }
+
+    private void Start()
+    {
+        _offset = _mainCamera.transform.position - _playerTransform.position;
+    }
+
+    private void Update()
+    {
+        // プレイヤーを追従する
+        FollowPlayer();
     }
 
     //=================================== カメラの変更処理 =====================================
@@ -70,7 +85,7 @@ public class CameraController : MonoBehaviour
                 _mainCamera.depth = 1;
                 _subCamera.depth = 0;
 
-                // UI制御はGameControllerで行う
+                // UI制御
 
                 break;
 
@@ -80,7 +95,7 @@ public class CameraController : MonoBehaviour
                 _mainCamera.depth = 0;
                 _subCamera.depth = 1;
 
-                // UI制御はGameControllerで行う
+                // UI制御
 
                 break;
 
@@ -144,9 +159,9 @@ public class CameraController : MonoBehaviour
         _changeCameraPos = null;
     }
 
-    //=================================== マウス制御 =====================================
+    //=================================== カメラ挙動制御 =====================================
     /// <summary>
-    /// マウス操作でカメラを動かす（銃撃モード時に処理）
+    /// マウス操作でサブカメラを動かす（銃撃モード時に処理）
     /// </summary>
     public void MoveCamera()
     {
@@ -166,4 +181,20 @@ public class CameraController : MonoBehaviour
 
         _subCamera.transform.eulerAngles = new Vector3(_rotationX, _rotationY, 0.0f);
     }
+
+    // メインカメラ追従処理
+    private void FollowPlayer()
+    {
+        // 目標位置を計算
+        Vector3 targetPosition = _playerTransform.transform.position + _offset;
+
+        targetPosition.x = Mathf.Clamp(targetPosition.x, -0.7f, 0.7f);
+        targetPosition.z = Mathf.Clamp(targetPosition.z, -2.3f, -1.9f);
+
+        // 滑らかに追従
+        _mainCamera.transform.position = Vector3.SmoothDamp(_mainCamera.transform.position, targetPosition, ref _velocity, 1f / _smoothSpeed);
+    }
+
+    //=================================== UI処理 =====================================
+
 }

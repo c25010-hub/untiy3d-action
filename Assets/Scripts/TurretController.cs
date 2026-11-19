@@ -59,7 +59,7 @@ public class TurretController : MonoBehaviour, IDamageable
     [SerializeField] private GameObject _turretHead; // タレットの頭部
     [SerializeField] private GameObject _turretMount;// 頭部の取付部位
     [SerializeField] private GameObject[] _muzzles = new GameObject[4];
-    [SerializeField] private Image _turretSliders;
+    [SerializeField] private Image _turretSlider;
     [SerializeField] private Collider _turretCollider;
 
     [SerializeField] private LineRenderer[] _laserGlowLines = new LineRenderer[4];
@@ -68,11 +68,12 @@ public class TurretController : MonoBehaviour, IDamageable
     // SliderTypの容量に合わせる
     private Coroutine[] _coroutines = new Coroutine[System.Enum.GetValues(typeof(SliderType)).Length];
     private Coroutine _reGenerateEnergy, _generateTurretAsync;
-    
+    private Camera _mainCamera;
 
+    [SerializeField] private float _upperOffset, _rightOffset;
     private float _rotationSpeed  = 10;    // 回転速度
     private float _firstShotMultiplier = 1;// ダメージ倍率
-    private float _laserSpeed = 20f;       // レーザーの速度
+    private float _laserSpeed = 17f;       // レーザーの速度
 
     private float[] _traveledDistances = new float[4];
     private float _gunfireRange = 10f;
@@ -82,7 +83,6 @@ public class TurretController : MonoBehaviour, IDamageable
     private int _stageLevel;
     private int _shotCost = 20;
     private int _energyReGenerateAmount = 5;
-    
 
     private bool _readyToFire = false;
     private bool _startCooldown = true;
@@ -101,6 +101,11 @@ public class TurretController : MonoBehaviour, IDamageable
 
         // ボスのステータスを適用
         SetStatus();
+    }
+
+    private void Start()
+    {
+        _mainCamera = Camera.main;
 
         // ステージの状況を選択した項目に合わせる
         SetBattleScene();
@@ -110,6 +115,12 @@ public class TurretController : MonoBehaviour, IDamageable
     {
         // プレイヤーを追従させる
         RotateTurret();
+    }
+
+    private void LateUpdate()
+    {
+        // スライダーの追従処理
+        UpdateSliderPosition();
     }
 
     //=================================== 初期処理 =====================================
@@ -161,6 +172,7 @@ public class TurretController : MonoBehaviour, IDamageable
             case 10:
                 Debug.Log($"ステージLv：{_stageLevel}");
                 newMaterial = Resources.Load<Material>("Materials/Metal");
+                _turretSlider.gameObject.SetActive(false);
                 ; break;
 
             case 50:
@@ -180,7 +192,6 @@ public class TurretController : MonoBehaviour, IDamageable
         // マテリアルをリソースフォルダから適用
         if (_turretStand.TryGetComponent<Renderer>(out var renderer)) renderer.material = newMaterial;
 
-        _turretSliders.gameObject.SetActive(false);
     }
 
     //=================================== 動作制御 =====================================
@@ -289,7 +300,6 @@ public class TurretController : MonoBehaviour, IDamageable
             _currentPositions[i] = _shootingPoints[i];
         }
 
-        // レーザー表示開始
         for (int i = 0; i < _laserGlowLines.Length; i ++)
         {
             _laserGlowLines[i].enabled = true;
@@ -400,9 +410,11 @@ public class TurretController : MonoBehaviour, IDamageable
     }
 
     //=================================== スライダーの追従処理 =====================================
-    private void MoveTurretSlider()
+    private void UpdateSliderPosition()
     {
-
+        Vector3 targetPosition = this.transform.position + Vector3.up * _upperOffset + _mainCamera.transform.transform.right * _rightOffset;
+        Vector3 screenPosition = _mainCamera.WorldToScreenPoint(targetPosition);
+        _turretSlider.rectTransform.position = screenPosition;
     }
 
     //=================================== ダメージ計算処理・取得処理 =====================================
@@ -453,11 +465,13 @@ public class TurretController : MonoBehaviour, IDamageable
     // 破壊処理
     private void BreakTurret()
     {
-        _turretSliders.gameObject.SetActive(false);
+        // 爆発エフェクト
+
+
+        _turretSlider.gameObject.SetActive(false);
         _turretCollider.enabled = false;
         _readyToFire = false;
         this.gameObject.SetActive(false);
-
 
         _gameController.StartCoroutine(ReGenerateTurret(_turretType, _energySliderType));
     }
@@ -489,7 +503,7 @@ public class TurretController : MonoBehaviour, IDamageable
     /// </summary>
     public IEnumerator GenerateTurretAsync()
     {
-        _turretSliders.gameObject.SetActive(true);
+        _turretSlider.gameObject.SetActive(true);
 
         // HP回復
         _currentHp = _maxHp;
