@@ -333,6 +333,12 @@ public class PlayerController : MonoBehaviour, IDamageable
         _playerAnim.SetInteger("Run", 0);
     }
 
+    // 移動速度を割る
+    private void DivideMovementSpeed()
+    {
+        _playerRb.linearVelocity = new Vector3(_playerRb.linearVelocity.x / 4, _playerRb.linearVelocity.y, _playerRb.linearVelocity.z / 4);
+    }
+
     // 回避処理
     // NOTE:回避後は時間外でなければ、次の攻撃につなげられる
     private void Avoidance()
@@ -344,8 +350,8 @@ public class PlayerController : MonoBehaviour, IDamageable
             {
                 _staminaCanvasGroup.alpha = 1f;
 
-                // 移動を強制的に止める
-                StopMovement();
+                // 移動速度を割る
+                DivideMovementSpeed();
                 _avoidance = true;
 
                 if (_isAttacking)
