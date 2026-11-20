@@ -64,6 +64,7 @@ public class TurretController : MonoBehaviour, IDamageable
 
     [SerializeField] private LineRenderer[] _laserGlowLines = new LineRenderer[4];
     [SerializeField] private LineRenderer[] _laserCoreLines = new LineRenderer[4];
+    [SerializeField] private LineRenderer[] _laserWarnings = new LineRenderer[4];
 
     // SliderTypの容量に合わせる
     private Coroutine[] _coroutines = new Coroutine[System.Enum.GetValues(typeof(SliderType)).Length];
@@ -248,16 +249,42 @@ public class TurretController : MonoBehaviour, IDamageable
 
         if (!_startCooldown) return;
 
-        _currentFireCooldown -= Time.deltaTime;
+        // 警告レ－ザー
+        for (int i = 0; i < _laserWarnings.Length; i++)
+        {
+            _shootingPoints[i] = _muzzles[i].transform.position;
+            _laserWarnings[i].positionCount = 2;
+            _laserWarnings[i].SetPosition(0, _shootingPoints[i]);
+            _laserWarnings[i].SetPosition(1, _playerTransform.position);
+        }
+
+        float delta = Time.deltaTime;
+        _currentFireCooldown -= delta;
+
+        foreach (var laserWarning in _laserWarnings)
+        {
+            Color color = laserWarning.material.GetColor("_BaseColor");
+            color.a = Mathf.Clamp01(color.a + delta / _maxFireCooldown);
+            laserWarning.material.SetColor("_BaseColor", color);
+        }
 
         if (_currentFireCooldown <= 0)
         {
             _startCooldown = false;
             _currentFireCooldown = _maxFireCooldown;
+
+            foreach (var laserWarning in _laserWarnings)
+            {
+                Color color = laserWarning.material.GetColor("_BaseColor");
+                color.a = 0;
+                laserWarning.material.SetColor("_BaseColor", color);
+            }
+
             Attack();
         }
     }
 
+    //=================================== 攻撃処理 =====================================
     // 攻撃
     private void Attack()
     {
@@ -385,6 +412,7 @@ public class TurretController : MonoBehaviour, IDamageable
         _laserCoreLines[index].SetPosition(1, currentPosition);
     }
 
+    //=================================== エネルギー回復処理 =====================================
     // エネルギー自動回復処理
     private IEnumerator ReGenerateEnergy(CallType type)
     {
@@ -496,8 +524,6 @@ public class TurretController : MonoBehaviour, IDamageable
     }
 
     //=================================== アニメーション処理 =====================================
-
-
     /// <summary>
     /// タレット生成時のアニメーション処理（実行は GameController側で行う！）
     /// </summary>
