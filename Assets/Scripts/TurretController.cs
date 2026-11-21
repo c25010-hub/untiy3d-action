@@ -317,6 +317,8 @@ public class TurretController : MonoBehaviour, IDamageable
     /// </summary>
     private IEnumerator AttackRayAsync()
     {
+        yield return new WaitForSeconds(0.2f);
+
         for (int i = 0; i < isActive.Length; i++) isActive[i] = true;
 
         for (int i = 0; i < _muzzles.Length; i++)
