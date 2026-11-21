@@ -31,6 +31,7 @@ public class GameController : LoadingController
 
     [SerializeField] private Transform _itemsParent;
     [SerializeField] private List<GameObject> _items = new List<GameObject>();// プレファブ化されたアイテム
+    [SerializeField] private Transform[] _circleCenters = new Transform[3];   // アイテム生成可能範囲
     [SerializeField] private GameObject[] _turretStands = new GameObject[System.Enum.GetValues(typeof(TurretType)).Length];
     [SerializeField] private TurretController[] _turretControllers = new TurretController[System.Enum.GetValues(typeof(TurretType)).Length];
     [SerializeField] private Slider[] _sliders = new Slider[System.Enum.GetValues(typeof(SliderType)).Length];
@@ -44,12 +45,8 @@ public class GameController : LoadingController
     private float _itemsRotateSpeed = 2f;
     private float _itemSpawnInterval = 30;
     private float _itemSpawnTimer;
-
-    // アイテム生成可能範囲
-    [SerializeField] private Transform _minSpawnPosX;
-    [SerializeField] private Transform _maxSpawnPosX;
-    [SerializeField] private Transform _minSpawnPosZ;
-    [SerializeField] private Transform _maxSpawnPosZ;
+    private float _spawnRadius = 5f;// 円の半径
+    private float _spawnHeight = 2f;// 生成する高さ
 
     private bool _gameSet = false;
 
@@ -135,12 +132,6 @@ public class GameController : LoadingController
     // 不要なアイテムを非表示
     private void HideObjects()
     {
-        // アイテム生成の制限区域
-        if (_minSpawnPosX != null) _minSpawnPosX.gameObject.SetActive(false);
-        if (_maxSpawnPosX != null) _maxSpawnPosX.gameObject.SetActive(false);
-        if (_minSpawnPosZ != null) _minSpawnPosZ.gameObject.SetActive(false);
-        if (_maxSpawnPosZ != null) _maxSpawnPosZ.gameObject.SetActive(false);
-
         // タレット
         foreach (var controller in _turretControllers)
         {
@@ -178,7 +169,18 @@ public class GameController : LoadingController
 
             float t = elapsedTime / duration;
             slider.value = Mathf.SmoothStep(start, target, t);
-            valueText.SetText("{0:0}%", slider.value * 100f);
+
+            switch (sliderTyp)
+            {
+                case SliderType.PlayerHpSlider:
+                case SliderType.BossHpSlider:
+                    valueText.SetText("{0:0}", slider.value * maxValue);
+                    break;
+
+                default:
+                    valueText.SetText("{0:0}%", slider.value * 100f);
+                    break;
+            }
 
             yield return null;
         }
@@ -230,40 +232,7 @@ public class GameController : LoadingController
     // アイテム生成
     private void GenerateItem()
     {
-        if (_gameSet == true) return;
 
-        _itemSpawnTimer += Time.deltaTime;
-        if (_itemSpawnTimer < _itemSpawnInterval) return;
-        
-        _itemSpawnTimer = 0;
-
-        if (_items == null || _items.Count == 0) return;
-
-        int itemIndex = Random.Range(0, _items.Count);
-        GameObject originalItem = _items[itemIndex];
-
-        if (originalItem == null)
-        {
-            Debug.LogError("生成するアイテムが設定されていません。", this);
-            return;
-        }
-
-        float minX = _minSpawnPosX.position.x;
-        float maxX = _maxSpawnPosX.position.x;
-
-        float minZ = _minSpawnPosZ.position.z;
-        float maxZ = _maxSpawnPosZ.position.z;
-
-        float randomX = Random.Range(minX, maxX);
-        float randomZ = Random.Range(minZ, maxZ);
-        float spawnY = originalItem.transform.localScale.y / 1.5f;
-
-        Vector3 spawnPosition = new Vector3(randomX, spawnY, randomZ);
-
-        // アイテムを生成
-        GameObject item = Instantiate(originalItem, spawnPosition, Quaternion.identity, _itemsParent);
-
-        StartCoroutine(ItemRotateLoop(item));
     }
 
     // 回転処理

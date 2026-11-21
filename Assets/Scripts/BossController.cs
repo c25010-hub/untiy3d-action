@@ -96,6 +96,10 @@ public class BossController : MonoBehaviour, IDamageable
         _currentEnergyResist = _maxEnergyResist;
         _currentCritRate = _maxCritRate;
         _currentCritDamage = _maxCritDamage;
+
+        // HPをUIに反映する
+        int beforeValue = _currentHp;
+        _coroutines[(int)SliderType.BossHpSlider] = StartCoroutine(_gameController.UpdateSlider(SliderType.BossHpSlider, _currentHp, beforeValue, _maxHp));
     }
 
     //=================================== イベント関数 =====================================
@@ -169,22 +173,5 @@ public class BossController : MonoBehaviour, IDamageable
     {
         // リタイア演出は GameController に通知を出す
         _gameController.GameSet(BattleResult.Lose);
-    }
-
-    //=================================== 当たり判定処理 =====================================
-    public void OnTriggerEnter(Collider other)
-    {
-        // 必須：プレイヤーに当たった場合ではなく、あくまで攻撃が当たった場合に改変しろ
-
-        if (other.gameObject.CompareTag("Player"))
-        {
-            IDamageable damageable = other.gameObject.GetComponent<IDamageable>();
-
-            if (damageable != null)
-            {
-                // ダメージを与える
-
-            }
-        }
     }
 }
