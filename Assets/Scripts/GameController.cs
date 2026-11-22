@@ -32,28 +32,29 @@ public class GameController : LoadingController
     [SerializeField] private Transform _itemsParent;
     [SerializeField] private List<GameObject> _items = new List<GameObject>();// プレファブ化されたアイテム
     [SerializeField] private Transform[] _circleCenters = new Transform[3];   // アイテム生成可能範囲
-    [SerializeField] private GameObject[] _turretStands = new GameObject[System.Enum.GetValues(typeof(TurretType)).Length];
     [SerializeField] private TurretController[] _turretControllers = new TurretController[System.Enum.GetValues(typeof(TurretType)).Length];
     [SerializeField] private Slider[] _sliders = new Slider[System.Enum.GetValues(typeof(SliderType)).Length];
     [SerializeField] private Image _staminaBackground;
     [SerializeField] private Image _staminaFillArea;
     [SerializeField] private TextMeshProUGUI[] _sliderValueTexts = new TextMeshProUGUI[System.Enum.GetValues(typeof(SliderType)).Length];
 
-    private int _difficultyType;
     private int _stageLevel;
 
-    private float _itemsRotateSpeed = 2f;
-    private float _itemSpawnInterval = 30;
+    private float _itemsRotateSpeed = 20f;
+    private float _itemSpawnInterval = 10;
     private float _itemSpawnTimer;
-    private float _spawnRadius = 5f;// 円の半径
-    private float _spawnHeight = 2f;// 生成する高さ
+    private float _spawnRadius = 0.7f;// 円の半径
 
     private bool _gameSet = false;
 
     private void Awake()
     {
-        _difficultyType = PlayerPrefs.GetInt("DifficultyType", 0);
         _stageLevel = PlayerPrefs.GetInt("StageLevel", 10);
+
+        foreach (var item in _circleCenters)
+        {
+            item.gameObject.SetActive(false);
+        }
     }
 
     void Start()
@@ -174,6 +175,8 @@ public class GameController : LoadingController
             {
                 case SliderType.PlayerHpSlider:
                 case SliderType.BossHpSlider:
+                case SliderType.TurretLeftHpSlider:
+                case SliderType.TurretRightHpSlider:
                     valueText.SetText("{0:0}", slider.value * maxValue);
                     break;
 
@@ -232,7 +235,24 @@ public class GameController : LoadingController
     // アイテム生成
     private void GenerateItem()
     {
+        _itemSpawnTimer += Time.deltaTime;
 
+        if (_itemSpawnTimer < _itemSpawnInterval) return;
+        _itemSpawnTimer = 0;
+
+        int _itemIndex = Random.Range(0, _items.Count);
+        Vector3 _itemSize = _items[_itemIndex].transform.localScale;
+        int centerIndex = Random.Range(0, _circleCenters.Length);
+        Vector3 center = _circleCenters[centerIndex].position;
+        Vector2 randomPosition = Random.insideUnitCircle * _spawnRadius;
+
+        Vector3 spawnPosition = new Vector3(
+            center.x + randomPosition.x,
+            0,
+            center.z + randomPosition.y
+            );
+
+        StartCoroutine(ItemRotateLoop(Instantiate(_items[_itemIndex], spawnPosition, Quaternion.identity)));
     }
 
     // 回転処理

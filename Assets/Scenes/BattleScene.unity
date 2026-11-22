@@ -2922,7 +2922,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 64b6ea405868b9842a4db5668475d0de, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TurretController
-  _turretType: 1
+  _turretType: 0
   _hpSliderType: 3
   _energySliderType: 4
   _gameController: {fileID: 641789581}
@@ -3512,11 +3512,17 @@ MonoBehaviour:
   _loadingBar: {fileID: 93117858}
   _loadingText: {fileID: 1762377265}
   _itemsParent: {fileID: 773808337}
-  _items: []
+  _items:
+  - {fileID: 438507576109749528, guid: ae923255299de7c4fb257ea9432531ae, type: 3}
+  - {fileID: 9063888622910786755, guid: 0f7c29ac0c1016548b546b6b1433da43, type: 3}
+  - {fileID: 2862364996392230218, guid: f05be88ae227a72419d532d0065a83d6, type: 3}
+  - {fileID: 5426378342515076187, guid: 62d15e761163ba446964155d4c3fb1bd, type: 3}
+  - {fileID: 7581798012864455766, guid: 6444574227b2da44591eeb04e5e40b8c, type: 3}
+  - {fileID: 59228727038048881, guid: b34cc234b1a1b3143b2de8a99ce79916, type: 3}
   _circleCenters:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
+  - {fileID: 1435229464}
+  - {fileID: 1564902469}
+  - {fileID: 2105302680}
   _turretStands:
   - {fileID: 1391581005}
   - {fileID: 507572247}
@@ -5934,7 +5940,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 64b6ea405868b9842a4db5668475d0de, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TurretController
-  _turretType: 0
+  _turretType: 1
   _hpSliderType: 5
   _energySliderType: 6
   _gameController: {fileID: 641789581}
@@ -6386,8 +6392,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.5, y: 0.5, z: 0.5}
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Size: {x: 0.5, y: 0.5, z: 0.6}
+  m_Center: {x: 0, y: 0, z: 0.05}
 --- !u!4 &1199457523
 Transform:
   m_ObjectHideFlags: 0
@@ -7631,7 +7637,7 @@ GameObject:
   - component: {fileID: 1435229463}
   - component: {fileID: 1435229462}
   m_Layer: 0
-  m_Name: CircleCenter1
+  m_Name: CircleCenter0
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -7662,7 +7668,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 13d1038cb1c01014db4d3d510ccae975, type: 2}
+  - {fileID: 2100000, guid: 2ee89ea4ddf86e94ca45def59c5321e4, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -7703,7 +7709,7 @@ Transform:
   m_GameObject: {fileID: 1435229460}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.388, y: 0.35, z: 0.47}
+  m_LocalPosition: {x: -1.551, y: 0.35, z: 0.444}
   m_LocalScale: {x: 0.17695986, y: 0.17695986, z: 0.17695986}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -8114,8 +8120,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.5, y: 0.5, z: 0.5}
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Size: {x: 0.5, y: 0.5, z: 0.6}
+  m_Center: {x: 0, y: 0, z: 0.05}
 --- !u!4 &1552178502
 Transform:
   m_ObjectHideFlags: 0
@@ -8186,7 +8192,7 @@ GameObject:
   - component: {fileID: 1564902468}
   - component: {fileID: 1564902467}
   m_Layer: 0
-  m_Name: CircleCenter2
+  m_Name: CircleCenter1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -8217,7 +8223,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 13d1038cb1c01014db4d3d510ccae975, type: 2}
+  - {fileID: 2100000, guid: 2ee89ea4ddf86e94ca45def59c5321e4, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -8258,7 +8264,7 @@ Transform:
   m_GameObject: {fileID: 1564902465}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.047, y: 0.35, z: 0.17}
+  m_LocalPosition: {x: 0.015, y: 0.35, z: 0.17}
   m_LocalScale: {x: 0.17695986, y: 0.17695986, z: 0.17695986}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -8775,6 +8781,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: TemporaryBoss
       objectReference: {fileID: 0}
+    - target: {fileID: 3694769008214763021, guid: 25c318a52922fde41a155470c5d285f8, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: a9c18b946168d314bba02e880c5338dd, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -12176,7 +12186,7 @@ GameObject:
   - component: {fileID: 2105302679}
   - component: {fileID: 2105302678}
   m_Layer: 0
-  m_Name: CircleCenter3
+  m_Name: CircleCenter2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -12207,7 +12217,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 13d1038cb1c01014db4d3d510ccae975, type: 2}
+  - {fileID: 2100000, guid: 2ee89ea4ddf86e94ca45def59c5321e4, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -12464,8 +12474,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.5, y: 0.5, z: 0.5}
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Size: {x: 0.5, y: 0.5, z: 0.6}
+  m_Center: {x: 0, y: 0, z: 0.05}
 --- !u!4 &2146448040
 Transform:
   m_ObjectHideFlags: 0

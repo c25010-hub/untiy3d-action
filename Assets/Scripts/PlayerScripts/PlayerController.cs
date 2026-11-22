@@ -66,7 +66,7 @@ public class PlayerController : MonoBehaviour, IDamageable
 
     [SerializeField] private float _upperOffset, _rightOffset;
     private float _gunfireRange = 500f;
-    private float _shootingCooldown = 0.2f;// 銃撃のクールダウン
+    private float _shootingCooldown = 0.1f;// 銃撃のクールダウン
     private float _comboTimeout = 1.0f;    // コンボ受付の猶予時間
     private float _staminaRegenerationDelay = 1.4f;// スタミナ回復が始まるまでの遅延
 
@@ -346,6 +346,18 @@ public class PlayerController : MonoBehaviour, IDamageable
         // 回避
         if (Input.GetKeyDown(KeyCode.LeftShift) || Input.GetKeyDown(KeyCode.RightShift))
         {
+            // 銃撃処理を中断
+            if (_gunFireMode)
+            {
+                if (_rapidFireOn != null)
+                {
+                    StopCoroutine(_rapidFireOn);
+                    _rapidFireOn = null;
+                }
+
+                RapidFireOff();
+            }
+
             if (_currentStamina > 0 && _avoidance == false)
             {
                 _staminaCanvasGroup.alpha = 1f;
@@ -360,18 +372,6 @@ public class PlayerController : MonoBehaviour, IDamageable
                     StartAttackTimer();
                 }
 
-                // 銃撃処理を中断
-                if (_gunFireMode)
-                {
-                    if (_rapidFireOn != null)
-                    {
-                        StopCoroutine(_rapidFireOn);
-                        _rapidFireOn = null;
-                    }
-
-                    RapidFireOff();
-                }
-
                 // 回避アニメション
                 _playerAnim.SetTrigger("Dodge");
 
@@ -381,7 +381,7 @@ public class PlayerController : MonoBehaviour, IDamageable
                 if (_currentStamina < 0) _currentStamina = 0;
 
                 // 自身の前方向へ突進
-                _playerRb.AddForce(transform.forward * _playerRushSpeed) ;
+                _playerRb.AddForce(transform.forward * _playerRushSpeed);
 
                 //プレイヤーのスタミナ量をUIに反映する
                 if (_updatePlayerStamina != null) StopCoroutine(_updatePlayerStamina);
@@ -506,7 +506,7 @@ public class PlayerController : MonoBehaviour, IDamageable
     // 銃撃処理
     private void RapidFire()
     {
-        if (!_gunFireMode) return;
+        if (!_gunFireMode || _defeated || _avoidance) return;
 
         // カメラをマウスで動かす処理
         _cameraController.MoveCamera();
@@ -522,11 +522,8 @@ public class PlayerController : MonoBehaviour, IDamageable
             return;
         }
 
-        // マウスが接続されてるか確認
-        if (Mouse.current == null) return;
-
         // 銃撃
-        if (Mouse.current.leftButton.wasPressedThisFrame)
+        if (Input.GetMouseButton(0))
         {
             _shootingTimer = 0;
             _playerAnim.SetTrigger("Fire");
@@ -556,8 +553,6 @@ public class PlayerController : MonoBehaviour, IDamageable
         // 銃撃開始モーション
         _playerAnim.SetTrigger("FireOn");
 
-        // スローモーション ON
-        Time.timeScale = 0.1f;
         _shootingTimer = _shootingCooldown;
 
         // 銃撃開始
@@ -572,12 +567,7 @@ public class PlayerController : MonoBehaviour, IDamageable
         _sword.gameObject.SetActive(true);
         foreach (var gun in _guns) gun.gameObject.SetActive(false);
 
-        if (_currentEnergy < _maxEnergy)
-        {
-            _gunFireMode = false;// 銃撃停止
-        }
-
-        Time.timeScale = 1.0f;// スローモーション OFF
+        _gunFireMode = false;// 銃撃停止
 
         // 銃撃終了モーション
         _playerAnim.SetTrigger("FireOff");

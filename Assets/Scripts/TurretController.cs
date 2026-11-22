@@ -100,14 +100,13 @@ public class TurretController : MonoBehaviour, IDamageable
     private void Awake()
     {
         _stageLevel = PlayerPrefs.GetInt("StageLevel", 10);
-    }
 
-    private void Start()
-    {
         _mainCamera = Camera.main;
 
         // ステージの状況を選択した項目に合わせる
         SetBattleScene();
+
+        this.gameObject.SetActive(false);
     }
 
     void Update()
@@ -131,9 +130,9 @@ public class TurretController : MonoBehaviour, IDamageable
         int _stageLevel = PlayerPrefs.GetInt("StageLevel", 10);
         float _stageLevelMultiplier = PlayerPrefs.GetFloat("StageLevelMultiplier", 0.2f);
 
-        int _baseHp = _bossData.BaseHp / 7;
-        int _baseAtk = _bossData.BaseAtk / 10;
-        int _baseDef = _bossData.BaseDef / 4;
+        int _baseHp = _bossData.BaseHp / 8;
+        int _baseAtk = _bossData.BaseAtk / 8;
+        int _baseDef = _bossData.BaseDef / 8;
 
         float _basePhysResist = _bossData.BasePhysResist / 2;    // 物理耐性
         float _baseEnergyResist = _bossData.BaseEnergyResist / 2;// エネルギー耐性
