@@ -85,6 +85,7 @@ public class TurretController : MonoBehaviour, IDamageable
     private int _shotCost = 20;
     private int _energyReGenerateAmount = 5;
 
+    private bool _isDestroyed = false;
     private bool _readyToFire = false;
     private bool _startCooldown = true;
     bool[] isActive = new bool[4];
@@ -99,9 +100,6 @@ public class TurretController : MonoBehaviour, IDamageable
     private void Awake()
     {
         _stageLevel = PlayerPrefs.GetInt("StageLevel", 10);
-
-        // ボスのステータスを適用
-        SetStatus();
     }
 
     private void Start()
@@ -114,6 +112,8 @@ public class TurretController : MonoBehaviour, IDamageable
 
     void Update()
     {
+        if (_isDestroyed) return;
+
         // プレイヤーを追従させる
         RotateTurret();
     }
@@ -161,6 +161,9 @@ public class TurretController : MonoBehaviour, IDamageable
         _currentEnergyResist = _maxEnergyResist;
         _currentCritRate = _maxCritRate;
         _currentCritDamage = _maxCritDamage;
+
+        // 警告レーザーのの位置を初期化
+        InitializeWarningLasersPosition();
     }
 
     // ステージの状況を選択した項目に合わせる
@@ -176,23 +179,15 @@ public class TurretController : MonoBehaviour, IDamageable
                 _turretSlider.gameObject.SetActive(false);
                 ; break;
 
-            case 50:
-                Debug.Log($"ステージLv：{_stageLevel}");
-                newMaterial = Resources.Load<Material>("Materials/Unit_Selection_v1");
-                ; break;
-
-            case 100:
-                Debug.Log($"ステージLv：{_stageLevel}");
-                ; break;
-
             default:
-                Debug.LogError("選択した難易度が適用しません");
+                Debug.Log($"ステージLv：{_stageLevel}");
+                SetStatus();
+                newMaterial = Resources.Load<Material>("Materials/Unit_Selection_v1");
                 break;
         }
 
         // マテリアルをリソースフォルダから適用
         if (_turretStand.TryGetComponent<Renderer>(out var renderer)) renderer.material = newMaterial;
-
     }
 
     //=================================== 動作制御 =====================================
@@ -329,7 +324,7 @@ public class TurretController : MonoBehaviour, IDamageable
             _currentPositions[i] = _shootingPoints[i];
         }
 
-        for (int i = 0; i < _laserGlowLines.Length; i ++)
+        for (int i = 0; i < _laserGlowLines.Length; i++)
         {
             _laserGlowLines[i].enabled = true;
             _laserGlowLines[i].positionCount = 2;
@@ -359,8 +354,6 @@ public class TurretController : MonoBehaviour, IDamageable
                 // 進んだ距離の範囲内で衝突判定
                 if (isActive[i] && Physics.Raycast(ray, out hit, moveDistance))
                 {
-                    Debug.Log("発砲！");
-
                     isActive[i] = false;
                     _laserGlowLines[i].enabled = false;
                     _laserCoreLines[i].enabled = false;
@@ -385,14 +378,7 @@ public class TurretController : MonoBehaviour, IDamageable
         }
 
         // レーザーを非表示にする
-        foreach (var laserGlowLine in _laserGlowLines)
-        {
-            laserGlowLine.enabled = false;
-        }
-        foreach (var laserCoreLine in _laserCoreLines)
-        {
-            laserCoreLine.enabled = false;
-        }
+        HideLaser();
 
         // クールタイム開始
         _startCooldown = true;
@@ -412,6 +398,33 @@ public class TurretController : MonoBehaviour, IDamageable
 
         _laserCoreLines[index].SetPosition(0, startPosition);
         _laserCoreLines[index].SetPosition(1, currentPosition);
+    }
+
+    // 警告レーザーのの位置を初期化
+    private void InitializeWarningLasersPosition()
+    {
+        // 警告レーザーの長さを初期化
+        for (int i = 0; i < _laserWarnings.Length; i++)
+        {
+            _shootingPoints[i] = _muzzles[i].transform.position;
+            _laserWarnings[i].positionCount = 2;
+            _laserWarnings[i].SetPosition(0, _shootingPoints[i]);
+            _laserWarnings[i].SetPosition(1, _shootingPoints[i]);
+        }
+    }
+
+    // レーザーの非表示処理
+    private void HideLaser()
+    {
+        // レーザーを非表示にする
+        foreach (var laserGlowLine in _laserGlowLines)
+        {
+            laserGlowLine.enabled = false;
+        }
+        foreach (var laserCoreLine in _laserCoreLines)
+        {
+            laserCoreLine.enabled = false;
+        }
     }
 
     //=================================== エネルギー回復処理 =====================================
@@ -495,6 +508,11 @@ public class TurretController : MonoBehaviour, IDamageable
     // 破壊処理
     private void BreakTurret()
     {
+        _isDestroyed = true;
+        StopCoroutine(AttackRayAsync());
+        InitializeWarningLasersPosition();
+        HideLaser();
+
         // 爆発エフェクト
 
 
@@ -531,6 +549,7 @@ public class TurretController : MonoBehaviour, IDamageable
     /// </summary>
     public IEnumerator GenerateTurretAsync()
     {
+        _isDestroyed = false;
         _turretSlider.gameObject.SetActive(true);
 
         // HP回復
