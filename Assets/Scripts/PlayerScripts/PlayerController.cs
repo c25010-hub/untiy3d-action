@@ -38,10 +38,10 @@ public class PlayerController : MonoBehaviour, IDamageable
     public int CurrentStamina => _currentStamina;
 
     //=================================== バフ増加値 =====================================
-    private float [] Buffs;
+    private float [] Buffs = new float[Enum.GetValues(typeof(BuffType)).Length];
 
     //=================================== スタック上限 =====================================
-    private int[] BuffStacks;
+    private int[] BuffStacks = new int[Enum.GetValues(typeof(BuffType)).Length];
 
     //=================================== フィールド =====================================
     [SerializeField] private GameController _gameController;
@@ -73,9 +73,9 @@ public class PlayerController : MonoBehaviour, IDamageable
     private float _shootingTimer;
     private float _comboTimer;
 
-    private float _playerRushSpeed = 185f;
+    private float _playerRushSpeed = 160f;
     private float _playerRotateSpeed = 10.0f;
-    private float _playerSpeed = 2.0f;
+    private float _playerSpeed = 1.5f;
 
     private bool _gunFireMode = false;
     private bool _defeated = false;
@@ -93,10 +93,6 @@ public class PlayerController : MonoBehaviour, IDamageable
     {
         // 透明化処理
         HideObjects();
-
-        int buffTypeCount = Enum.GetValues(typeof(BuffType)).Length;
-        Buffs = new float[buffTypeCount];
-        BuffStacks = new int[buffTypeCount];
 
         _mainCamera = Camera.main;
         _playerRb = GetComponent<Rigidbody>();
@@ -304,7 +300,7 @@ public class PlayerController : MonoBehaviour, IDamageable
         float t = Time.deltaTime;
         float horizontal = Input.GetAxisRaw("Horizontal");
         float vertical = Input.GetAxisRaw("Vertical");
-        Vector3 moveDirection = new Vector3(horizontal, 0f, vertical);
+        Vector3 moveDirection = new Vector3(horizontal, 0f, vertical).normalized;
 
         // 移動
         _playerRb.linearVelocity = new Vector3(
@@ -371,6 +367,10 @@ public class PlayerController : MonoBehaviour, IDamageable
                     AttackColliderAllOff();
                     StartAttackTimer();
                 }
+
+                _playerAnim.ResetTrigger("FirstStrike");
+                _playerAnim.ResetTrigger("SecondStrike");
+                _playerAnim.ResetTrigger("ThirdStrike");
 
                 // 回避アニメション
                 _playerAnim.SetTrigger("Dodge");
@@ -681,11 +681,11 @@ public class PlayerController : MonoBehaviour, IDamageable
     {
         if (BuffStacks[(int)type] >= limit) return;
         if (amount <= 0 || duration <= 0) return;
-        BuffStacks[(int)type]++;
+        int stack = ++BuffStacks[(int)type];
 
         switch (type)
         {
-        　　// 攻撃力
+            // 攻撃力
             case BuffType.AttackUp: Buffs[(int)BuffType.AttackUp] += amount; break;
             // 防御力
             case BuffType.DefUp: Buffs[(int)BuffType.DefUp] += amount; break;
@@ -700,7 +700,10 @@ public class PlayerController : MonoBehaviour, IDamageable
                 break;
         }
 
-        Debug.Log($"{type}：{amount * BuffStacks[(int)type]}増加 持続時間：{duration}");
+        Debug.Log($"{type}：{amount * stack}増加 持続時間：{duration}");
+
+        // 対応するアイコンを表示
+        _gameController.DisplayBuffIcon(type, stack);
 
         // カウントダウン開始
         StartCoroutine(BuffCountdown(type, amount, duration));
@@ -715,8 +718,11 @@ public class PlayerController : MonoBehaviour, IDamageable
             yield return null;
         }
 
-        BuffStacks[(int)type]--;
+        int stack = --BuffStacks[(int)type];
         Buffs[(int)type] -= amount;
+
+        // アイコンに反映する
+        _gameController.BuffExpired(type, stack);
     }
     
     /// <summary>

@@ -103,7 +103,7 @@ public class TurretController : MonoBehaviour, IDamageable
 
         _mainCamera = Camera.main;
 
-        // ステージの状況を選択した項目に合わせる
+        // ステージの状態を選択した難易度に合わせる
         SetBattleScene();
 
         this.gameObject.SetActive(false);
@@ -165,7 +165,7 @@ public class TurretController : MonoBehaviour, IDamageable
         InitializeWarningLasersPosition();
     }
 
-    // ステージの状況を選択した項目に合わせる
+    // ステージの状態を選択した難易度に合わせる
     private void SetBattleScene()
     {
         Material newMaterial = null;
