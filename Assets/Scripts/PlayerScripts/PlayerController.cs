@@ -77,6 +77,7 @@ public class PlayerController : MonoBehaviour, IDamageable
     private float _playerRotateSpeed = 10.0f;
     private float _playerSpeed = 1.5f;
 
+    private bool _reinforcement = false;
     private bool _gunFireMode = false;
     private bool _defeated = false;
     private bool _startAttackTimer = false;
@@ -272,7 +273,7 @@ public class PlayerController : MonoBehaviour, IDamageable
         int beforeValue = _currentEnergy;
         _currentEnergy -= _shotCost;
 
-        if (_currentEnergy < 0) _currentEnergy = 0;
+        _currentEnergy = Mathf.Max(_currentEnergy, 0);
 
         // プレイヤーのエネルギー量をUIに反映する（GameController に通知を送る）
         if (_coroutines[(int)SliderType.PlayerEnergySlider] != null) StopCoroutine(_coroutines[(int)SliderType.PlayerEnergySlider]);
@@ -340,7 +341,9 @@ public class PlayerController : MonoBehaviour, IDamageable
     private void Avoidance()
     {
         // 回避
-        if (Input.GetKeyDown(KeyCode.LeftShift) || Input.GetKeyDown(KeyCode.RightShift))
+        if (Input.GetKeyDown(KeyCode.LeftShift) ||
+            Input.GetKeyDown(KeyCode.RightShift) ||
+            Input.GetMouseButton(1))
         {
             // 銃撃処理を中断
             if (_gunFireMode)
@@ -442,7 +445,7 @@ public class PlayerController : MonoBehaviour, IDamageable
         if (Mouse.current == null) return;
 
         // 通常攻撃
-        if (Input.GetButton("Fire1") && _isAttacking == false)
+        if (Input.GetMouseButton(0) && _isAttacking == false)
         {
             // 移動を強制的に止める
             StopMovement();
@@ -491,15 +494,19 @@ public class PlayerController : MonoBehaviour, IDamageable
     {
         // 銃撃可能か確認
         if (_currentEnergy < _maxEnergy) return;
-        if (_avoidance || _isAttacking) return;
+        //if (_avoidance || _isAttacking) return;
 
         if (Input.GetKeyDown(KeyCode.Q))
         {
             // 一瞬移動を強制的に止める
-            StopMovement();
+            //StopMovement();
 
             // 銃撃モード ON
-            RapidFireOn();
+            //RapidFireOn();
+
+            // 強化状態
+            if (_reinforcement) return;
+            StartCoroutine(Reinforcement());
         }
     }
 
@@ -539,7 +546,7 @@ public class PlayerController : MonoBehaviour, IDamageable
         _staminaBackground.rectTransform.position = screenPosition;
     }
 
-    //=================================== 銃撃開始・終了アクション =====================================
+    //=================================== プレイヤーの状態切り替え処理 =====================================
     // 開始演出
     private void RapidFireOn()
     {
@@ -574,6 +581,38 @@ public class PlayerController : MonoBehaviour, IDamageable
 
         // 三人称視点に戻す
         _cameraController.ChangeToMainCamera();
+    }
+
+    // 強化状態
+    private IEnumerator Reinforcement()
+    {
+        _reinforcement = true;
+        float amount = 0.2f;
+
+        // パラメーター上昇
+        Buffs[(int)BuffType.AttackUp] += amount;
+        Buffs[(int)BuffType.DefUp] += amount;
+        Buffs[(int)BuffType.CritDamageUp] += amount;
+
+        while (_currentEnergy > 0)
+        {
+            int beforeValue = _currentEnergy;
+            _currentEnergy--;
+            _currentEnergy = Mathf.Max(_currentEnergy, 0);
+
+            // エネルギー回復量を UI に反映（GameController に通知を出す）
+            if (_coroutines[(int)SliderType.PlayerEnergySlider] != null) StopCoroutine(_coroutines[(int)SliderType.PlayerEnergySlider]);
+            _coroutines[(int)SliderType.PlayerEnergySlider] = StartCoroutine(_gameController.UpdateSlider(SliderType.PlayerEnergySlider, _currentEnergy, beforeValue, _maxEnergy));
+
+            yield return new WaitForSeconds(0.1f);
+        }
+
+        // パラメーターを元に戻す
+        Buffs[(int)BuffType.AttackUp] -= amount;
+        Buffs[(int)BuffType.DefUp] -= amount;
+        Buffs[(int)BuffType.CritDamageUp] -= amount;
+
+        _reinforcement = false;
     }
 
     //=================================== ダメージ計算処理・取得処理 =====================================
@@ -618,7 +657,6 @@ public class PlayerController : MonoBehaviour, IDamageable
             // HPの変動と死亡処理
             _currentHp -= finalDamage;
             _currentHp = Mathf.Max(_currentHp, 0);
-            Debug.Log($"残りHP：{_currentHp}");
 
             // プレイヤーの HP量を UIに反映する（GameController に通知を送る）
             if (_coroutines[(int)SliderType.PlayerHpSlider] != null) StopCoroutine(_coroutines[(int)SliderType.PlayerHpSlider]);
@@ -641,7 +679,7 @@ public class PlayerController : MonoBehaviour, IDamageable
         _gameController.GameSet(BattleResult.Lose);// GameControllerに通知を出す
     }
 
-    //=================================== バフ処理 =====================================
+    //=================================== バフ処理・回復処理 =====================================
     /// <summary>
     /// 回復を受け取る関数
     /// </summary>
@@ -679,27 +717,14 @@ public class PlayerController : MonoBehaviour, IDamageable
     /// </summary>
     public void ApplyBuff(BuffType type, float amount, float duration, int limit)
     {
-        if (BuffStacks[(int)type] >= limit) return;
+        int index = (int)type;
+
+        if (index < 0 || index >= Buffs.Length) return;
+        if (BuffStacks[index] >= limit) return;
         if (amount <= 0 || duration <= 0) return;
-        int stack = ++BuffStacks[(int)type];
+        int stack = ++BuffStacks[index];
 
-        switch (type)
-        {
-            // 攻撃力
-            case BuffType.AttackUp: Buffs[(int)BuffType.AttackUp] += amount; break;
-            // 防御力
-            case BuffType.DefUp: Buffs[(int)BuffType.DefUp] += amount; break;
-            // 会心ダメージ
-            case BuffType.CritDamageUp: Buffs[(int)BuffType.CritDamageUp] += amount; break;
-            // 移動速度
-            case BuffType.SpeedUp: Buffs[(int)BuffType.SpeedUp] += amount; break;
-            // 未対応
-            default:
-                Debug.LogError("未対応のバフタイプです。", this);
-                enabled = false;
-                break;
-        }
-
+        Buffs[index] += amount;
         Debug.Log($"{type}：{amount * stack}増加 持続時間：{duration}");
 
         // 対応するアイコンを表示
@@ -730,6 +755,8 @@ public class PlayerController : MonoBehaviour, IDamageable
     /// </summary>
     public void ChargeEnergy(HitBoxType type)
     {
+        if (_reinforcement) return;
+
         int beforeValue = _currentEnergy;
 
         // エネルギー回復

@@ -55,9 +55,10 @@ public class TurretController : MonoBehaviour, IDamageable
     [SerializeField] private GameController _gameController;
     [SerializeField] private BossController _bossController;
     [SerializeField] private BossDataSO _bossData;
-    [SerializeField] private GameObject _turretStand;// タレットの土台
-    [SerializeField] private GameObject _turretHead; // タレットの頭部
-    [SerializeField] private GameObject _turretMount;// 頭部の取付部位
+    [SerializeField] private GameObject _turretStand; // タレットの土台
+    [SerializeField] private GameObject _turretShield;// タレットのシールド
+    [SerializeField] private GameObject _turretHead;  // タレットの頭部
+    [SerializeField] private GameObject _turretMount; // 頭部の取付部位
     [SerializeField] private GameObject[] _muzzles = new GameObject[4];
     [SerializeField] private Image _turretSlider;
     [SerializeField] private Collider _turretCollider;
@@ -100,12 +101,12 @@ public class TurretController : MonoBehaviour, IDamageable
     private void Awake()
     {
         _stageLevel = PlayerPrefs.GetInt("StageLevel", 10);
-
         _mainCamera = Camera.main;
 
         // ステージの状態を選択した難易度に合わせる
         SetBattleScene();
 
+        _turretShield.gameObject.SetActive(false);
         this.gameObject.SetActive(false);
     }
 
@@ -446,6 +447,8 @@ public class TurretController : MonoBehaviour, IDamageable
             yield return new WaitForSeconds(0.05f);
         }
 
+        if (_turretShield.gameObject.activeSelf) _turretShield.gameObject.SetActive(false);
+
         _currentEnergy = _maxEnergy;
         _readyToFire = true;
         Debug.Log("エネルギー：充填完了");
@@ -471,6 +474,7 @@ public class TurretController : MonoBehaviour, IDamageable
     // ダメージを受け取る：(受けたダメージ - 防御力) x (1 - 耐性%)
     public void TakeDamage(int damage, DamageType damageType)
     {
+        if (_turretShield.gameObject.activeSelf) return;
         if (_currentHp <= 0) return;
         Debug.Log("ダメージを受けました！");
 
@@ -550,6 +554,7 @@ public class TurretController : MonoBehaviour, IDamageable
     {
         _isDestroyed = false;
         _turretSlider.gameObject.SetActive(true);
+        _turretShield.gameObject.SetActive(true);
 
         // HP回復
         _currentHp = _maxHp;

@@ -24,7 +24,9 @@ public class BossDataSO : ScriptableObject
     [SerializeField] private float _defBaseMultiplier;
 
     [Header("攻撃ダメージ倍率")]
-
+    [SerializeField] private float _attackMultiplier1;
+    [SerializeField] private float _attackMultiplier2;
+    [SerializeField] private float _attackMultiplier3;
 
     [Header("累乗倍率")]
     [SerializeField] private float _statusExponent; // ステータスを累乗する値
@@ -44,7 +46,9 @@ public class BossDataSO : ScriptableObject
     public float BaseCritDamage => _baseCritDamage;
 
     // 攻撃ダメージ倍率
-
+    public float AttackMultiplier1 => _attackMultiplier1;
+    public float AttackMultiplier2 => _attackMultiplier2;
+    public float AttackMultiplier3 => _attackMultiplier3;
 
     // ステージレベル倍率
     public float StatusExponent => _statusExponent;  // ステータスを累乗する値

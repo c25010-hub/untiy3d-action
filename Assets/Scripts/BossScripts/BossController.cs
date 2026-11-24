@@ -37,6 +37,7 @@ public class BossController : MonoBehaviour, IDamageable
     //=================================== フィールド =====================================
     [SerializeField] private GameController _gameController;
     [SerializeField] private BossDataSO _bossData;
+    [SerializeField] private BossAttackHitBox[] _attackHitBoxes = new BossAttackHitBox[3];
     [SerializeField] private Transform _playerTransform;
     public Transform PlayerTransform => _playerTransform;
 
@@ -45,6 +46,10 @@ public class BossController : MonoBehaviour, IDamageable
 
     // SliderTypの容量に合わせる
     private Coroutine[] _coroutines = new Coroutine[System.Enum.GetValues(typeof(SliderType)).Length];
+
+    private float _rotationSpeed = 2f;
+
+    private bool _defeated = false;
 
     private void Awake()
     {
@@ -59,7 +64,13 @@ public class BossController : MonoBehaviour, IDamageable
 
     void Update()
     {
+        if (_defeated) return;
 
+        // 回転制御
+        RotateBoss();
+
+        // 攻撃パターンを管理
+        ControlAttackPattern();
     }
 
     //=================================== 初期処理 =====================================
@@ -103,37 +114,63 @@ public class BossController : MonoBehaviour, IDamageable
     }
 
     //=================================== イベント関数 =====================================
-
+    /// <summary>
+    /// 攻撃 1
+    /// </summary>
     public void Attack1()
     {
-
+        _attackHitBoxes[0].HitBoxOn();
     }
 
+    /// <summary>
+    /// 攻撃 2
+    /// </summary>
     public void Attack2()
     {
-
+        _attackHitBoxes[1].HitBoxOn();
     }
 
+    /// <summary>
+    /// 攻撃 3
+    /// </summary>
     public void Attack3()
     {
-
+        _attackHitBoxes[2].HitBoxOn();
     }
 
+    /// <summary>
+    /// 攻撃 4
+    /// </summary>
     public void Attack4()
     {
 
     }
 
-    //=================================== ボスの制御関数 =====================================
-    // 動作制御
-    private void MoveBoss()
+    /// <summary>
+    /// 
+    /// </summary>
+    public void AttackColliderAllOff()
+    {
+
+    }
+
+    //=================================== ボスの回転制御 =====================================
+    // 回転制御
+    private void RotateBoss()
+    {
+
+    }
+
+    //=================================== ボスの攻撃制御 =====================================
+    // 攻撃パターンを管理
+    private void ControlAttackPattern()
     {
 
     }
 
     //=================================== ダメージ計算処理・取得処理 =====================================
     // ダメージ計算式：基礎攻撃力 x ダメージ倍率 x (1 + 会心ダメージ)
-    private int CalculateDamage(float damageMultiplier)
+    public int CalculateDamage(float damageMultiplier)
     {
         bool isCritical = Random.value <= _currentCritRate;
         float finalDamage = _currentAtk * damageMultiplier * (isCritical ? (1 + _currentCritDamage) : 1.0f);
@@ -162,15 +199,28 @@ public class BossController : MonoBehaviour, IDamageable
         int finalDamage = Mathf.RoundToInt(baseDamage * (1f - targetResist));
         finalDamage = Mathf.Max(finalDamage, 1);
 
+        int beforeValue = _currentHp;
+
         // HPの変動と死亡処理
         _currentHp -= finalDamage;
         _currentHp = Mathf.Max(_currentHp, 0);
+
+        // プレイヤーの HP量を UIに反映する（GameController に通知を送る）
+        if (_coroutines[(int)SliderType.BossHpSlider] != null) StopCoroutine(_coroutines[(int)SliderType.BossHpSlider]);
+        _coroutines[(int)SliderType.BossHpSlider] = StartCoroutine(_gameController.UpdateSlider(SliderType.BossHpSlider, _currentHp, beforeValue, _maxHp));
+
+        if (_currentHp == 0)
+        {
+            Defeated();
+        }
     }
 
     //=================================== リタイア処理 =====================================
     // リタイア演出実行関数
     private void Defeated()
     {
+        _defeated = true;
+
         // リタイア演出は GameController に通知を出す
         _gameController.GameSet(BattleResult.Lose);
     }
