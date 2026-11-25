@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
@@ -49,9 +50,11 @@ public class PlayerController : MonoBehaviour, IDamageable
     [SerializeField] private PlayerDataSO _playerData;
     [SerializeField] private GameObject _sword;
     [SerializeField] private GameObject[] _guns = new GameObject[2];
+    [SerializeField] private GameObject _powerBoostEffect;
     [SerializeField] private AttackHitBox[] _hitBoxs = new AttackHitBox[3];
     [SerializeField] private Image _staminaBackground;
     [SerializeField] private CanvasGroup _staminaCanvasGroup;
+    [SerializeField] private LookAt _lookAt;
 
     // SliderTypの容量に合わせる
     private Coroutine[] _coroutines = new Coroutine[System.Enum.GetValues(typeof(SliderType)).Length];
@@ -77,7 +80,7 @@ public class PlayerController : MonoBehaviour, IDamageable
     private float _playerRotateSpeed = 10.0f;
     private float _playerSpeed = 1.5f;
 
-    private bool _reinforcement = false;
+    private bool _powerBoost = false;
     private bool _gunFireMode = false;
     private bool _defeated = false;
     private bool _startAttackTimer = false;
@@ -88,6 +91,8 @@ public class PlayerController : MonoBehaviour, IDamageable
     {
         // ステータスを適用
         SetStats();
+
+        _powerBoostEffect.gameObject.SetActive(false);
     }
 
     private void Start()
@@ -107,9 +112,6 @@ public class PlayerController : MonoBehaviour, IDamageable
 
         // 挙動制御
         MovePlayer();
-
-        // 回避処理
-        Avoidance();
 
         // 通常攻撃
         PlayerAttack();
@@ -227,9 +229,9 @@ public class PlayerController : MonoBehaviour, IDamageable
     /// </summary>
     public void AttackColliderAllOff()
     {
-        for (int i = 0; i < 3; i++)
+        foreach (var hitBoxes in _hitBoxs)
         {
-            if (_hitBoxs[i] != null) _hitBoxs[i].HitBoxOff();
+            hitBoxes.HitBoxOff();
         }
     }
 
@@ -296,31 +298,35 @@ public class PlayerController : MonoBehaviour, IDamageable
     // 移動制御
     private void MovePlayer()
     {
-        if (_isAttacking || _gunFireMode || _defeated || _avoidance) return;
-
-        float t = Time.deltaTime;
         float horizontal = Input.GetAxisRaw("Horizontal");
         float vertical = Input.GetAxisRaw("Vertical");
         Vector3 moveDirection = new Vector3(horizontal, 0f, vertical).normalized;
 
-        // 移動
-        _playerRb.linearVelocity = new Vector3(
-            moveDirection.x * _playerSpeed * (1 + Buffs[(int)BuffType.SpeedUp]),
-            _playerRb.linearVelocity.y,
-            moveDirection.z * _playerSpeed * (1 + Buffs[(int)BuffType.SpeedUp])
-            );
+        Avoidance(moveDirection);
 
-        // 回転
-        if (moveDirection != Vector3.zero)
+        if (!_isAttacking && !_gunFireMode && !_defeated && !_avoidance)
         {
-            // 向きたい方向への回転を作る（LookRotatio）
-            Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
-            // 滑らかに回転させる（Slerp）
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, t * _playerRotateSpeed);
-        }
+            float t = Time.deltaTime;
 
-        int animValue = (Mathf.Abs((int)horizontal) > 0 || Mathf.Abs((int)vertical) > 0) ? 1 : 0;
-        _playerAnim.SetInteger("Run", animValue);
+            // 移動
+            _playerRb.linearVelocity = new Vector3(
+                moveDirection.x * _playerSpeed * (1 + Buffs[(int)BuffType.SpeedUp]),
+                _playerRb.linearVelocity.y,
+                moveDirection.z * _playerSpeed * (1 + Buffs[(int)BuffType.SpeedUp])
+                );
+
+            // 回転
+            if (moveDirection != Vector3.zero)
+            {
+                // 向きたい方向への回転を作る（LookRotatio）
+                Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
+                // 滑らかに回転させる（Slerp）
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, t * _playerRotateSpeed);
+            }
+
+            int animValue = (Mathf.Abs((int)horizontal) > 0 || Mathf.Abs((int)vertical) > 0) ? 1 : 0;
+            _playerAnim.SetInteger("Run", animValue);
+        }
     }
 
     // 移動を強制的に止める
@@ -338,32 +344,29 @@ public class PlayerController : MonoBehaviour, IDamageable
 
     // 回避処理
     // NOTE:回避後は時間外でなければ、次の攻撃につなげられる
-    private void Avoidance()
+    private void Avoidance(Vector3 direction)
     {
         // 回避
         if (Input.GetKeyDown(KeyCode.LeftShift) ||
             Input.GetKeyDown(KeyCode.RightShift) ||
             Input.GetMouseButton(1))
         {
-            // 銃撃処理を中断
-            if (_gunFireMode)
-            {
-                if (_rapidFireOn != null)
-                {
-                    StopCoroutine(_rapidFireOn);
-                    _rapidFireOn = null;
-                }
-
-                RapidFireOff();
-            }
-
             if (_currentStamina > 0 && _avoidance == false)
             {
+                _avoidance = true;
                 _staminaCanvasGroup.alpha = 1f;
 
-                // 移動速度を割る
-                DivideMovementSpeed();
-                _avoidance = true;
+                // 銃撃処理を中断
+                if (_gunFireMode)
+                {
+                    if (_rapidFireOn != null)
+                    {
+                        StopCoroutine(_rapidFireOn);
+                        _rapidFireOn = null;
+                    }
+
+                    RapidFireOff();
+                }
 
                 if (_isAttacking)
                 {
@@ -383,8 +386,19 @@ public class PlayerController : MonoBehaviour, IDamageable
                 _currentStamina -= _staminaConsumption;
                 if (_currentStamina < 0) _currentStamina = 0;
 
+                if (direction != Vector3.zero)
+                {
+                    // 移動方向に対して瞬時に回転
+                    transform.rotation = Quaternion.LookRotation(direction);
+                }
+
+                // 移動速度を割る
+                DivideMovementSpeed();
+                Debug.Log(_playerRb.linearVelocity.magnitude);
+
                 // 自身の前方向へ突進
                 _playerRb.AddForce(transform.forward * _playerRushSpeed);
+                Debug.Log("回避直後：" + _playerRb.linearVelocity);
 
                 //プレイヤーのスタミナ量をUIに反映する
                 if (_updatePlayerStamina != null) StopCoroutine(_updatePlayerStamina);
@@ -451,6 +465,12 @@ public class PlayerController : MonoBehaviour, IDamageable
             StopMovement();
             AttackColliderAllOff();
 
+            // 敵の方角に対して振り向く
+            if (_lookAt.TryGetNearestEnemy(out Vector3 direction))
+            {
+                transform.rotation = Quaternion.LookRotation(direction);
+            }
+
             _isAttacking = true;      // 攻撃中フラグを立てる
             _startAttackTimer = false;// タイマーを止める
             _comboTimer = 0f;         // タイマーをリセット
@@ -505,7 +525,7 @@ public class PlayerController : MonoBehaviour, IDamageable
             //RapidFireOn();
 
             // 強化状態
-            if (_reinforcement) return;
+            if (_powerBoost) return;
             StartCoroutine(Reinforcement());
         }
     }
@@ -586,7 +606,8 @@ public class PlayerController : MonoBehaviour, IDamageable
     // 強化状態
     private IEnumerator Reinforcement()
     {
-        _reinforcement = true;
+        _powerBoost = true;
+        _powerBoostEffect.gameObject.SetActive(true);
         float amount = 0.2f;
 
         // パラメーター上昇
@@ -612,7 +633,8 @@ public class PlayerController : MonoBehaviour, IDamageable
         Buffs[(int)BuffType.DefUp] -= amount;
         Buffs[(int)BuffType.CritDamageUp] -= amount;
 
-        _reinforcement = false;
+        _powerBoostEffect.gameObject.SetActive(false);
+        _powerBoost = false;
     }
 
     //=================================== ダメージ計算処理・取得処理 =====================================
@@ -657,6 +679,7 @@ public class PlayerController : MonoBehaviour, IDamageable
             // HPの変動と死亡処理
             _currentHp -= finalDamage;
             _currentHp = Mathf.Max(_currentHp, 0);
+            Debug.Log("ダメージを受けた：" + finalDamage + "　残りHP：" + _currentHp);
 
             // プレイヤーの HP量を UIに反映する（GameController に通知を送る）
             if (_coroutines[(int)SliderType.PlayerHpSlider] != null) StopCoroutine(_coroutines[(int)SliderType.PlayerHpSlider]);
@@ -755,7 +778,7 @@ public class PlayerController : MonoBehaviour, IDamageable
     /// </summary>
     public void ChargeEnergy(HitBoxType type)
     {
-        if (_reinforcement) return;
+        if (_powerBoost) return;
 
         int beforeValue = _currentEnergy;
 

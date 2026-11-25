@@ -1,5 +1,5 @@
-﻿using UnityEngine;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
 public class BossController : MonoBehaviour, IDamageable
 {
@@ -37,9 +37,20 @@ public class BossController : MonoBehaviour, IDamageable
     //=================================== フィールド =====================================
     [SerializeField] private GameController _gameController;
     [SerializeField] private BossDataSO _bossData;
-    [SerializeField] private BossAttackHitBox[] _attackHitBoxes = new BossAttackHitBox[3];
+    [SerializeField] private BossAttackHitBox[] _hitBoxes = new BossAttackHitBox[3];
+    [SerializeField] private Animator _bossAnimator;
     [SerializeField] private Transform _playerTransform;
     public Transform PlayerTransform => _playerTransform;
+
+    private string[] _bossAttackPatterns = new string[6]
+    {
+        "Attack1",
+        "Attack2",
+        "Attack3",
+        "Pattern1",
+        "Pattern1",
+        "Pattern1"
+    };
 
     // 攻撃時の対象のID
     private HashSet<int> _hitPlayer = new HashSet<int>();
@@ -47,27 +58,26 @@ public class BossController : MonoBehaviour, IDamageable
     // SliderTypの容量に合わせる
     private Coroutine[] _coroutines = new Coroutine[System.Enum.GetValues(typeof(SliderType)).Length];
 
-    private float _rotationSpeed = 2f;
+    private float _rotateSpeed = 1.5f;
+    private float _maxRotateAngle = 15f;
 
     private bool _defeated = false;
+
+    private Quaternion _defaultRotation;
 
     private void Awake()
     {
         //  ステータスをセット
         SetStatus();
-    }
-
-    void Start()
-    {
-
+        _defaultRotation = transform.rotation;
     }
 
     void Update()
     {
         if (_defeated) return;
 
-        // 回転制御
-        RotateBoss();
+        // プレイヤーを追従する回転制御
+        LookAtPlayer();
 
         // 攻撃パターンを管理
         ControlAttackPattern();
@@ -119,7 +129,7 @@ public class BossController : MonoBehaviour, IDamageable
     /// </summary>
     public void Attack1()
     {
-        _attackHitBoxes[0].HitBoxOn();
+        _hitBoxes[0].HitBoxOn();
     }
 
     /// <summary>
@@ -127,7 +137,7 @@ public class BossController : MonoBehaviour, IDamageable
     /// </summary>
     public void Attack2()
     {
-        _attackHitBoxes[1].HitBoxOn();
+        _hitBoxes[1].HitBoxOn();
     }
 
     /// <summary>
@@ -135,7 +145,7 @@ public class BossController : MonoBehaviour, IDamageable
     /// </summary>
     public void Attack3()
     {
-        _attackHitBoxes[2].HitBoxOn();
+        _hitBoxes[2].HitBoxOn();
     }
 
     /// <summary>
@@ -147,25 +157,64 @@ public class BossController : MonoBehaviour, IDamageable
     }
 
     /// <summary>
-    /// 
+    /// 攻撃用コライダーをすべて OFF
     /// </summary>
     public void AttackColliderAllOff()
     {
-
+        foreach (var hitBoxes in _hitBoxes)
+        {
+            hitBoxes.HitBoxOff();
+        }
     }
 
-    //=================================== ボスの回転制御 =====================================
-    // 回転制御
-    private void RotateBoss()
+    public void StartRecastTime()
     {
 
     }
 
-    //=================================== ボスの攻撃制御 =====================================
+    //=================================== ボスの回転制御処理 =====================================
+    // 回転制御
+    private void LookAtPlayer()
+    {
+        // プレイヤーへの方向を取得
+        Vector3 direction = _playerTransform.position - transform.position;
+
+        // 上下方向の回転を防ぐ
+        direction.y = 0f;
+
+        if (direction.sqrMagnitude < 0.0001f) return;
+
+        // 基準方向から見たプレイヤーの方向に変換
+        Vector3 localDirection = Quaternion.Inverse(_defaultRotation) * direction;
+
+        // 左右の角度を取得
+        float angle = Mathf.Atan2(localDirection.x, localDirection.z) * Mathf.Rad2Deg;
+
+        // 回転角度を制限
+        angle = Mathf.Clamp(angle, -_maxRotateAngle, _maxRotateAngle);
+
+        // 基準角度に制限した回転を加える
+        Quaternion targetRotation = _defaultRotation * Quaternion.Euler(0f, angle, 0f);
+
+        // 現在の角度と目標角度の差を取得
+        float angleDifference = Mathf.DeltaAngle(
+            transform.eulerAngles.y,
+            targetRotation.eulerAngles.y
+        );
+
+        // 差分を少しずつ加算
+        float rotation = angleDifference * _rotateSpeed * Time.deltaTime;
+
+        // Y軸を回転
+        transform.Rotate(0f, rotation, 0f);
+    }
+
+    //=================================== ボスの攻撃制御処理 =====================================
     // 攻撃パターンを管理
     private void ControlAttackPattern()
     {
-
+        int patternType = Random.Range(0, _bossAttackPatterns.Length);
+        _bossAnimator.Play(_bossAttackPatterns[patternType]);
     }
 
     //=================================== ダメージ計算処理・取得処理 =====================================

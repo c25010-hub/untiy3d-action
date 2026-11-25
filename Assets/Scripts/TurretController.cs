@@ -115,7 +115,7 @@ public class TurretController : MonoBehaviour, IDamageable
         if (_isDestroyed) return;
 
         // プレイヤーを追従させる
-        RotateTurret();
+        LookAtPlayer();
     }
 
     private void LateUpdate()
@@ -132,7 +132,7 @@ public class TurretController : MonoBehaviour, IDamageable
         float _stageLevelMultiplier = PlayerPrefs.GetFloat("StageLevelMultiplier", 0.2f);
 
         int _baseHp = _bossData.BaseHp / 8;
-        int _baseAtk = _bossData.BaseAtk / 8;
+        int _baseAtk = _bossData.BaseAtk / 4;
         int _baseDef = _bossData.BaseDef / 8;
 
         float _basePhysResist = _bossData.BasePhysResist / 2;    // 物理耐性
@@ -192,7 +192,7 @@ public class TurretController : MonoBehaviour, IDamageable
 
     //=================================== 動作制御 =====================================
     // プレイヤーを追従させる
-    private void RotateTurret()
+    private void LookAtPlayer()
     {
         if (!_readyToFire) return;
 
@@ -349,23 +349,34 @@ public class TurretController : MonoBehaviour, IDamageable
                 float moveDistance = Mathf.Min(step, _gunfireRange - _traveledDistances[i]);
 
                 Ray ray = new Ray(_currentPositions[i], _directions[i]);
-                RaycastHit hit;
+                RaycastHit[] hits = Physics.RaycastAll(ray, moveDistance);
 
-                // 進んだ距離の範囲内で衝突判定
-                if (isActive[i] && Physics.Raycast(ray, out hit, moveDistance))
+                // 衝突したオブジェクトを距離順に並び替える
+                System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+                if (isActive[i])
                 {
-                    isActive[i] = false;
-                    _laserGlowLines[i].enabled = false;
-                    _laserCoreLines[i].enabled = false;
-
-                    // プレイヤーに命中した場合
-                    if (hit.collider.CompareTag("Player"))
+                    foreach (RaycastHit hit in hits)
                     {
-                        IDamageable damageable = hit.collider.GetComponentInParent<IDamageable>();
-                        if (damageable != null) damageable.TakeDamage(CalculateDamage(_firstShotMultiplier), DamageType.EnergyDamage);
+                        // 敵に当たった場合は貫通
+                        if (hit.collider.transform.root.CompareTag("Enemy")) continue;
+
+                        // プレイヤーに当たった場合
+                        if (hit.collider.transform.root.CompareTag("Player"))
+                        {
+                            IDamageable damageable = hit.collider.GetComponentInParent<IDamageable>();
+                            if (damageable != null) damageable.TakeDamage(CalculateDamage(_firstShotMultiplier), DamageType.EnergyDamage);
+                        }
+
+                        // 敵以外に当たったらレーザーを停止
+                        isActive[i] = false;
+                        _laserGlowLines[i].enabled = false;
+                        _laserCoreLines[i].enabled = false;
+
+                        break;
                     }
                 }
-                
+
                 // 発射方角に対して打ったレイの移動量を加算
                 _currentPositions[i] += _directions[i] * moveDistance;
                 _traveledDistances[i] += moveDistance;
