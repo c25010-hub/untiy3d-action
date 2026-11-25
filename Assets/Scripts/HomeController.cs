@@ -263,6 +263,32 @@ public class HomeController : LoadingController
     // ステータスを反映する
     private void SetStatus(CharacterType characterType)
     {
+        // プレイヤー
+        // ステータスを計算： 基礎ステータス = 対象ステータス x (ステージレベル x 0.2) 0.5乗
+        _playerResultHp = Mathf.RoundToInt(_playerHp * Mathf.Pow(_stageLevel * _stageLevelMultiplier, _playerStatusExponent));
+        _playerResultAtk = Mathf.RoundToInt(_playerAtk * Mathf.Pow(_stageLevel * _stageLevelMultiplier, _playerStatusExponent));
+        _playerResultDef = Mathf.RoundToInt(_playerDef * Mathf.Pow(_stageLevel * _stageLevelMultiplier, _playerStatusExponent));
+        _playerResultEnergy = _playerEnergy;
+        _playerResultStamina = _playerStamina;
+
+        _playerResultPhysResist = _playerPhysResist;
+        _playerResultEnergyResist = _playerEnergyResist;
+        _playerResultCritRate = Mathf.Clamp01(_playerCritRate);
+        // 会心ダメージ = 基礎倍率 + (ステージレベル x 0.2) 0.5乗
+        _playerResultCritDamage = _playerCritDamage * Mathf.Pow(_stageLevel * _stageLevelMultiplier, _playerStatusExponent);
+
+        // ボス
+        // ステータスを計算： 基礎ステータス = 対象ステータス x (ステージレベル x 0.2) 0.6乗
+        _bossResultHp = Mathf.RoundToInt(_bossHp * Mathf.Pow(_stageLevel * _stageLevelMultiplier, _bossStatusExponent));
+        _bossResultAtk = Mathf.RoundToInt(_bossAtk * Mathf.Pow(_stageLevel * _stageLevelMultiplier, _bossStatusExponent));
+        _bossResultDef = Mathf.RoundToInt(_bossDef * Mathf.Pow(_stageLevel * _stageLevelMultiplier, _bossStatusExponent));
+
+        _bossResultPhysResist = _bossPhysResist;
+        _bossResultEnergyResist = _bossEnergyResist;
+        _bossResultCritRate = Mathf.Clamp01(_bossCritRate);
+        // 会心ダメージ = 基礎倍率 x (ステージレベル x 0.2) 0.6乗
+        _bossResultCritDamage = _bossCritDamage;
+
         if (characterType == CharacterType.Player)
         {
             // 必要なテキストを表示
@@ -270,19 +296,6 @@ public class HomeController : LoadingController
             {
                 image.gameObject.SetActive(true);
             }
-
-            // ステータスを計算： 基礎ステータス = 対象ステータス x (ステージレベル x 0.2) 0.5乗
-            _playerResultHp = Mathf.RoundToInt(_playerHp * Mathf.Pow(_stageLevel * _stageLevelMultiplier, _playerStatusExponent));
-            _playerResultAtk = Mathf.RoundToInt(_playerAtk * Mathf.Pow(_stageLevel * _stageLevelMultiplier, _playerStatusExponent));
-            _playerResultDef = Mathf.RoundToInt(_playerDef * Mathf.Pow(_stageLevel * _stageLevelMultiplier, _playerStatusExponent));
-            _playerResultEnergy = _playerEnergy;
-            _playerResultStamina = _playerStamina;
-
-            _playerResultPhysResist = _playerPhysResist;
-            _playerResultEnergyResist = _playerEnergyResist;
-            _playerResultCritRate = Mathf.Clamp01(_playerCritRate);
-            // 会心ダメージ = 基礎倍率 + (ステージレベル x 0.2) 0.5乗
-            _playerResultCritDamage = _playerCritDamage * Mathf.Pow(_stageLevel * _stageLevelMultiplier, _playerStatusExponent);
 
             // テキストに代入
             _statusTexts[0].text = $"HP：{_playerResultHp}";
@@ -303,17 +316,6 @@ public class HomeController : LoadingController
             {
                 image.gameObject.SetActive(false);
             }
-
-            // ステータスを計算： 基礎ステータス = 対象ステータス x (ステージレベル x 0.2) 0.6乗
-            _bossResultHp = Mathf.RoundToInt(_bossHp * Mathf.Pow(_stageLevel * _stageLevelMultiplier, _bossStatusExponent));
-            _bossResultAtk = Mathf.RoundToInt(_bossAtk * Mathf.Pow(_stageLevel * _stageLevelMultiplier, _bossStatusExponent));
-            _bossResultDef = Mathf.RoundToInt(_bossDef * Mathf.Pow(_stageLevel * _stageLevelMultiplier, _bossStatusExponent));
-
-            _bossResultPhysResist = _bossPhysResist;
-            _bossResultEnergyResist = _bossEnergyResist;
-            _bossResultCritRate = Mathf.Clamp01(_bossCritRate);
-            // 会心ダメージ = 基礎倍率 x (ステージレベル x 0.2) 0.6乗
-            _bossResultCritDamage = _bossCritDamage * Mathf.Pow(_stageLevel * _stageLevelMultiplier, _bossStatusExponent);
 
             // テキストに代入
             _statusTexts[0].text = $"HP：{_bossResultHp}";

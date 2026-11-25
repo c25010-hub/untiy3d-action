@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngineInternal;
 
 public class BossController : MonoBehaviour, IDamageable
 {
@@ -42,14 +44,16 @@ public class BossController : MonoBehaviour, IDamageable
     [SerializeField] private Transform _playerTransform;
     public Transform PlayerTransform => _playerTransform;
 
+    private Coroutine _selectAttackPattern;
+
     private string[] _bossAttackPatterns = new string[6]
     {
         "Attack1",
         "Attack2",
         "Attack3",
         "Pattern1",
-        "Pattern1",
-        "Pattern1"
+        "Pattern2",
+        "Pattern3"
     };
 
     // 攻撃時の対象のID
@@ -58,10 +62,12 @@ public class BossController : MonoBehaviour, IDamageable
     // SliderTypの容量に合わせる
     private Coroutine[] _coroutines = new Coroutine[System.Enum.GetValues(typeof(SliderType)).Length];
 
+    private float AttackRecastTime = 3;
     private float _rotateSpeed = 1.5f;
     private float _maxRotateAngle = 15f;
 
     private bool _defeated = false;
+    public bool Bossdefeated => _defeated;
 
     private Quaternion _defaultRotation;
 
@@ -78,9 +84,6 @@ public class BossController : MonoBehaviour, IDamageable
 
         // プレイヤーを追従する回転制御
         LookAtPlayer();
-
-        // 攻撃パターンを管理
-        ControlAttackPattern();
     }
 
     //=================================== 初期処理 =====================================
@@ -167,9 +170,13 @@ public class BossController : MonoBehaviour, IDamageable
         }
     }
 
+    /// <summary>
+    /// リキャストタイムに入り、そのまま次の攻撃につなげる
+    /// </summary>
     public void StartRecastTime()
     {
-
+        if (_defeated) return;
+        if (_selectAttackPattern == null) _selectAttackPattern = StartCoroutine(SelectAttackPattern());
     }
 
     //=================================== ボスの回転制御処理 =====================================
@@ -211,10 +218,17 @@ public class BossController : MonoBehaviour, IDamageable
 
     //=================================== ボスの攻撃制御処理 =====================================
     // 攻撃パターンを管理
-    private void ControlAttackPattern()
+    private IEnumerator SelectAttackPattern()
     {
-        int patternType = Random.Range(0, _bossAttackPatterns.Length);
-        _bossAnimator.Play(_bossAttackPatterns[patternType]);
+        yield return new WaitForSeconds(AttackRecastTime);
+
+        if (!_defeated)
+        {
+            int patternType = Random.Range(0, _bossAttackPatterns.Length);
+            _bossAnimator.Play(_bossAttackPatterns[patternType]);
+        }
+
+        _selectAttackPattern = null;
     }
 
     //=================================== ダメージ計算処理・取得処理 =====================================
@@ -269,8 +283,8 @@ public class BossController : MonoBehaviour, IDamageable
     private void Defeated()
     {
         _defeated = true;
-
-        // リタイア演出は GameController に通知を出す
-        _gameController.GameSet(BattleResult.Lose);
+        _bossAnimator.SetTrigger("Death");
+        AttackColliderAllOff();
+        _gameController.GameSet(BattleResult.Win);// GameControllerに通知を出す
     }
 }

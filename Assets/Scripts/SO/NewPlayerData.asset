@@ -14,18 +14,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerDataSO
   _baseHp: 1060
   _baseAtk: 320
-  _baseDef: 62
+  _baseDef: 52
   _baseEnergy: 100
   _baseStamina: 100
   _basePhysResist: 0.1
   _baseEnergyResist: 0.2
   _baseCritRate: 0.5
   _baseCritDamage: 0.5
-  _hpBaseMultiplier: 1
+  _hpBaseMultiplier: 1.2
   _atkBaseMultiplier: 1
   _defBaseMultiplier: 1
-  _firstStrikeMultiplier: 0.4
-  _secondStrikeMultiplier: 0.6
-  _thirdStrikeMultiplier: 0.8
+  _firstStrikeMultiplier: 0.6
+  _secondStrikeMultiplier: 0.8
+  _thirdStrikeMultiplier: 1
   _firstShotMultiplier: 0.2
   _statusExponent: 0.5

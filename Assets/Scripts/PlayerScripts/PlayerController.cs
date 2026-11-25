@@ -61,7 +61,7 @@ public class PlayerController : MonoBehaviour, IDamageable
     private Coroutine _rapidFireOn, _updatePlayerStamina, _regenerateStamina;
     private Camera _mainCamera;// 発砲時のRayの基準点になる
     private Rigidbody _playerRb;
-    private Animator _playerAnim;
+    private Animator _playerAnimator;
 
     private int _staminaConsumption = 20;
     private int _attackCount = 0;
@@ -102,7 +102,7 @@ public class PlayerController : MonoBehaviour, IDamageable
 
         _mainCamera = Camera.main;
         _playerRb = GetComponent<Rigidbody>();
-        _playerAnim = GetComponent<Animator>();
+        _playerAnimator = GetComponent<Animator>();
     }
 
     private void Update()
@@ -325,7 +325,7 @@ public class PlayerController : MonoBehaviour, IDamageable
             }
 
             int animValue = (Mathf.Abs((int)horizontal) > 0 || Mathf.Abs((int)vertical) > 0) ? 1 : 0;
-            _playerAnim.SetInteger("Run", animValue);
+            _playerAnimator.SetInteger("Run", animValue);
         }
     }
 
@@ -333,7 +333,7 @@ public class PlayerController : MonoBehaviour, IDamageable
     private void StopMovement()
     {
         _playerRb.linearVelocity = new Vector3(0, _playerRb.linearVelocity.y, 0);
-        _playerAnim.SetInteger("Run", 0);
+        _playerAnimator.SetInteger("Run", 0);
     }
 
     // 移動速度を割る
@@ -374,12 +374,12 @@ public class PlayerController : MonoBehaviour, IDamageable
                     StartAttackTimer();
                 }
 
-                _playerAnim.ResetTrigger("FirstStrike");
-                _playerAnim.ResetTrigger("SecondStrike");
-                _playerAnim.ResetTrigger("ThirdStrike");
+                _playerAnimator.ResetTrigger("FirstStrike");
+                _playerAnimator.ResetTrigger("SecondStrike");
+                _playerAnimator.ResetTrigger("ThirdStrike");
 
                 // 回避アニメション
-                _playerAnim.SetTrigger("Dodge");
+                _playerAnimator.SetTrigger("Dodge");
 
                 // スタミナ消費
                 int beforeValue = _currentStamina;
@@ -478,17 +478,17 @@ public class PlayerController : MonoBehaviour, IDamageable
             if (_attackCount == 0)
             {
                 _attackCount++;
-                _playerAnim.SetTrigger("FirstStrike");
+                _playerAnimator.SetTrigger("FirstStrike");
             }
             else if (_attackCount == 1)
             {
                 _attackCount++;
-                _playerAnim.SetTrigger("SecondStrike");
+                _playerAnimator.SetTrigger("SecondStrike");
             }
             else if (_attackCount == 2)
             {
                 _attackCount = 0;// 3段目が終わったらコンボ頭に戻す
-                _playerAnim.SetTrigger("ThirdStrike");
+                _playerAnimator.SetTrigger("ThirdStrike");
             }
         }
     }
@@ -553,7 +553,7 @@ public class PlayerController : MonoBehaviour, IDamageable
         if (Input.GetMouseButton(0))
         {
             _shootingTimer = 0;
-            _playerAnim.SetTrigger("Fire");
+            _playerAnimator.SetTrigger("Fire");
         }
     }
 
@@ -578,7 +578,7 @@ public class PlayerController : MonoBehaviour, IDamageable
         _cameraController.ChangeToSubCamera();
 
         // 銃撃開始モーション
-        _playerAnim.SetTrigger("FireOn");
+        _playerAnimator.SetTrigger("FireOn");
 
         _shootingTimer = _shootingCooldown;
 
@@ -597,7 +597,7 @@ public class PlayerController : MonoBehaviour, IDamageable
         _gunFireMode = false;// 銃撃停止
 
         // 銃撃終了モーション
-        _playerAnim.SetTrigger("FireOff");
+        _playerAnimator.SetTrigger("FireOff");
 
         // 三人称視点に戻す
         _cameraController.ChangeToMainCamera();
@@ -697,7 +697,7 @@ public class PlayerController : MonoBehaviour, IDamageable
     private void Defeated()
     {
         _defeated = true;
-        _playerAnim.SetTrigger("Death");
+        _playerAnimator.SetTrigger("Death");
         AttackColliderAllOff();
         _gameController.GameSet(BattleResult.Lose);// GameControllerに通知を出す
     }
