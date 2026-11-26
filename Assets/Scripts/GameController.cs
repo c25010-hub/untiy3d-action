@@ -37,6 +37,8 @@ public class GameController : LoadingController
     [SerializeField] private TurretController[] _turretControllers = new TurretController[System.Enum.GetValues(typeof(TurretType)).Length];
     // NOTE: SliderTypeと同じ順番で格納しろ！
     [SerializeField] private Slider[] _sliders = new Slider[System.Enum.GetValues(typeof(SliderType)).Length];
+    [SerializeField] private Slider[] _trailSliders = new Slider[System.Enum.GetValues(typeof(SliderType)).Length];
+    //[SerializeField] private Image[] _glowImages = new Image[System.Enum.GetValues(typeof(SliderType)).Length];
     [SerializeField] private Image _staminaBackground;
     [SerializeField] private Image _staminaFillArea;
     [SerializeField] private TextMeshProUGUI[] _sliderValueTexts = new TextMeshProUGUI[System.Enum.GetValues(typeof(SliderType)).Length];
@@ -155,15 +157,22 @@ public class GameController : LoadingController
     public IEnumerator UpdateSlider(SliderType sliderTyp, int currentValue, int beforeValue, int maxValue)
     {
         if (_sliders == null) yield break;
+
         int index = (int)sliderTyp;
 
-        // 配列の範囲チェック
         if (index < 0 || index >= _sliders.Length) yield break;
+
         Slider slider = _sliders[index];
         TextMeshProUGUI valueText = _sliderValueTexts[index];
 
-        // Sliderと最大値のチェック
         if (!slider || maxValue <= 0) yield break;
+
+        // HPゲージかどうか
+        bool isHpSlider =
+            sliderTyp == SliderType.PlayerHpSlider ||
+            sliderTyp == SliderType.BossHpSlider ||
+            sliderTyp == SliderType.TurretLeftHpSlider ||
+            sliderTyp == SliderType.TurretRightHpSlider;
 
         float duration = 0.5f;
         float elapsedTime = 0f;
@@ -171,12 +180,37 @@ public class GameController : LoadingController
         float start = Mathf.Clamp01((float)beforeValue / maxValue);
         float target = Mathf.Clamp01((float)currentValue / maxValue);
 
+        bool isDamage = isHpSlider && currentValue < beforeValue;
+
+        // HP回復時は遅延ゲージも一緒に動かす
+        if (isHpSlider && !isDamage)
+        {
+            _trailSliders[index].value = start;
+        }
+
+        // 赤ゲージの減少
         while (elapsedTime < duration)
         {
             elapsedTime += Time.deltaTime;
 
             float t = elapsedTime / duration;
-            slider.value = Mathf.SmoothStep(start, target, t);
+            float value = Mathf.SmoothStep(start, target, t);
+
+            slider.value = value;
+
+            // ダメージ以外は遅延ゲージも同時に更新
+            if (isHpSlider && !isDamage)
+            {
+                _trailSliders[index].value = value;
+            }
+
+            //// 発光エフェクト
+            //if (isDamage)
+            //{
+            //    Color color = _glowImages[index].color;
+            //    color.a = Mathf.Sin(t * Mathf.PI) * 0.9f;
+            //    _glowImages[index].color = color;
+            //}
 
             switch (sliderTyp)
             {
@@ -184,11 +218,11 @@ public class GameController : LoadingController
                 case SliderType.BossHpSlider:
                 case SliderType.TurretLeftHpSlider:
                 case SliderType.TurretRightHpSlider:
-                    valueText.SetText("{0:0}", slider.value * maxValue);
+                    valueText.SetText("{0:0}", value * maxValue);
                     break;
 
                 default:
-                    valueText.SetText("{0:0}%", slider.value * 100f);
+                    valueText.SetText("{0:0}%", value * 100f);
                     break;
             }
 
@@ -196,6 +230,39 @@ public class GameController : LoadingController
         }
 
         slider.value = target;
+
+        // ダメージを受けた場合
+        if (isDamage)
+        {
+            // 0.1秒待機
+            yield return new WaitForSeconds(0.1f);
+
+            // 遅延ゲージを減少させる
+            float trailStart = _trailSliders[index].value;
+            elapsedTime = 0f;
+
+            while (elapsedTime < duration)
+            {
+                elapsedTime += Time.deltaTime * 2;
+
+                float t = elapsedTime / duration;
+
+                _trailSliders[index].value =
+                    Mathf.SmoothStep(trailStart, target, t);
+
+                yield return null;
+            }
+
+            _trailSliders[index].value = target;
+        }
+
+        //if (isDamage)
+        //{
+        //    // 発光を終了
+        //    Color color = _glowImages[index].color;
+        //    color.a = 0f;
+        //    _glowImages[index].color = color;
+        //}
     }
 
     /// <summary>

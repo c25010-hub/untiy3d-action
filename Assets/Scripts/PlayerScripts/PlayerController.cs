@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
@@ -63,7 +62,7 @@ public class PlayerController : MonoBehaviour, IDamageable
     private Rigidbody _playerRb;
     private Animator _playerAnimator;
 
-    private int _staminaConsumption = 20;
+    private int _staminaConsumption = 12;
     private int _attackCount = 0;
     private int _shotCost = 2;
 
