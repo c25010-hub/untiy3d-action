@@ -12,7 +12,7 @@ EditorBuildSettings:
     path: Assets/Scenes/HomeScene.unity
     guid: 7c55782e9bc2ff64db7ef56516292fbf
   - enabled: 1
-    path: Assets/Scenes/BattleScene.unity
+    path: Assets/Scenes/BattleScene/BattleScene.unity
     guid: 18e45523f50c719409fb2d20a8b49f14
   m_configObjects:
     com.unity.input.settings: {fileID: 11400000, guid: ab829d0d5b171284396ff4c4889b479a, type: 2}

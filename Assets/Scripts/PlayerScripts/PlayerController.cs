@@ -740,6 +740,8 @@ public class PlayerController : MonoBehaviour, IDamageable
     /// </summary>
     public void ApplyBuff(BuffType type, float amount, float duration, int limit)
     {
+        if (_currentHp <= 0) return;
+
         int index = (int)type;
 
         if (index < 0 || index >= Buffs.Length) return;

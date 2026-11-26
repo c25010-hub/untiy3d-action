@@ -55,11 +55,6 @@ public class GameController : LoadingController
     private void Awake()
     {
         _stageLevel = PlayerPrefs.GetInt("StageLevel", 10);
-
-        foreach (var item in _circleCenters)
-        {
-            item.gameObject.SetActive(false);
-        }
     }
 
     void Start()
@@ -135,7 +130,7 @@ public class GameController : LoadingController
         Cursor.visible = true;
     }
 
-    // 不要なアイテムを非表示
+    // 不要な用途を非表示
     private void HideObjects()
     {
         // タレット
@@ -143,6 +138,13 @@ public class GameController : LoadingController
         {
             if (controller == null) continue;
             controller.TurretSetFalse();
+        }
+
+        // アイテム生成の基準点
+        foreach (var item in _circleCenters)
+        {
+            if (item == null) continue;
+            item.gameObject.SetActive(false);
         }
     }
 
@@ -240,6 +242,8 @@ public class GameController : LoadingController
     // アイテム生成
     private void GenerateItem()
     {
+        if (_gameSet) return;
+
         _itemSpawnTimer += Time.deltaTime;
 
         if (_itemSpawnTimer < _itemSpawnInterval) return;

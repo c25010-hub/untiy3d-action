@@ -173,7 +173,7 @@ public class BossController : MonoBehaviour, IDamageable
     /// <summary>
     /// リキャストタイムに入り、そのまま次の攻撃につなげる
     /// </summary>
-    public void StartRecastTime()
+    public void StartNextAttack()
     {
         if (_defeated) return;
         if (_selectAttackPattern == null) _selectAttackPattern = StartCoroutine(SelectAttackPattern());
@@ -225,7 +225,7 @@ public class BossController : MonoBehaviour, IDamageable
         if (!_defeated)
         {
             int patternType = Random.Range(0, _bossAttackPatterns.Length);
-            _bossAnimator.Play(_bossAttackPatterns[patternType]);
+            _bossAnimator.SetTrigger(_bossAttackPatterns[patternType]);
         }
 
         _selectAttackPattern = null;

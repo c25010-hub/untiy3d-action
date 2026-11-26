@@ -111,3 +111,11 @@ InitTestScene*.unity*
 # Ignore FreeAssets
 /[Aa]ssets/[Ff]reeAssets/
 /[Aa]ssets/[Ff]reeAssets.meta
+
+# Ignore SE
+/[Aa]ssets/[Ss]E/
+/[Aa]ssets/[Ss]E.meta
+
+# Ignore BGM
+/[Aa]ssets/[Bb]GM/
+/[Aa]ssets/[Bb]GM.meta

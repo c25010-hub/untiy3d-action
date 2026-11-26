@@ -61,6 +61,7 @@ public class TurretController : MonoBehaviour, IDamageable
     [SerializeField] private GameObject _turretMount; // 頭部の取付部位
     [SerializeField] private GameObject[] _muzzles = new GameObject[4];
     [SerializeField] private Image _turretSlider;
+    [SerializeField] private Material[] _turretSliderMaterial = new Material[2];
     [SerializeField] private Collider _turretCollider;
 
     [SerializeField] private LineRenderer[] _laserGlowLines = new LineRenderer[4];
@@ -112,7 +113,12 @@ public class TurretController : MonoBehaviour, IDamageable
 
     void Update()
     {
-        if (_bossController.Bossdefeated) return;
+        if (_bossController.Bossdefeated)
+        {
+            StopTurret();
+            return;
+        }
+
         if (_isDestroyed) return;
 
         // プレイヤーを追従させる
@@ -176,18 +182,18 @@ public class TurretController : MonoBehaviour, IDamageable
         {
             case 10:
                 Debug.Log($"ステージLv：{_stageLevel}");
-                newMaterial = Resources.Load<Material>("Materials/Metal");
+                newMaterial = _turretSliderMaterial[0];
                 _turretSlider.gameObject.SetActive(false);
                 ; break;
 
             default:
                 Debug.Log($"ステージLv：{_stageLevel}");
                 SetStatus();
-                newMaterial = Resources.Load<Material>("Materials/Unit_Selection_v1");
+                newMaterial = _turretSliderMaterial[1];
                 break;
         }
 
-        // マテリアルをリソースフォルダから適用
+        // マテリアルを適用
         if (_turretStand.TryGetComponent<Renderer>(out var renderer)) renderer.material = newMaterial;
     }
 
@@ -195,7 +201,6 @@ public class TurretController : MonoBehaviour, IDamageable
     // プレイヤーを追従させる
     private void LookAtPlayer()
     {
-        if (_bossController.Bossdefeated) return;
         if (!_readyToFire) return;
 
         // プレイヤー座標を取得
@@ -285,8 +290,6 @@ public class TurretController : MonoBehaviour, IDamageable
     // 攻撃
     private void Attack()
     {
-        if (_bossController.Bossdefeated) return;
-
         // 外してもエネルギーは消費する
         int beforeValue = _currentEnergy;
         _currentEnergy -= _shotCost;
@@ -316,90 +319,87 @@ public class TurretController : MonoBehaviour, IDamageable
     /// </summary>
     private IEnumerator AttackRayAsync()
     {
-        if (!_bossController.Bossdefeated)
-        {
-            yield return new WaitForSeconds(0.2f);
+        yield return new WaitForSeconds(0.2f);
 
-            for (int i = 0; i < isActive.Length; i++) isActive[i] = true;
+        for (int i = 0; i < isActive.Length; i++) isActive[i] = true;
+
+        for (int i = 0; i < _muzzles.Length; i++)
+        {
+            _traveledDistances[i] = 0f;
+            _shootingPoints[i] = _muzzles[i].transform.position;
+            _directions[i] = _muzzles[i].transform.forward;
+            _currentPositions[i] = _shootingPoints[i];
+        }
+
+        for (int i = 0; i < _laserGlowLines.Length; i++)
+        {
+            _laserGlowLines[i].enabled = true;
+            _laserGlowLines[i].positionCount = 2;
+            _laserGlowLines[i].SetPosition(0, _shootingPoints[i]);
+            _laserGlowLines[i].SetPosition(1, _shootingPoints[i]);
+
+            _laserCoreLines[i].enabled = true;
+            _laserCoreLines[i].positionCount = 2;
+            _laserCoreLines[i].SetPosition(0, _shootingPoints[i]);
+            _laserCoreLines[i].SetPosition(1, _shootingPoints[i]);
+        }
+
+        while (true)
+        {
+            if (_traveledDistances.Any(x => x >= _gunfireRange) || isActive.All(j => j == false)) break;
 
             for (int i = 0; i < _muzzles.Length; i++)
             {
-                _traveledDistances[i] = 0f;
-                _shootingPoints[i] = _muzzles[i].transform.position;
-                _directions[i] = _muzzles[i].transform.forward;
-                _currentPositions[i] = _shootingPoints[i];
-            }
+                // 速度がそのまま移動距離になる
+                float step = _laserSpeed * Time.deltaTime;
+                // 移動距離が上限を超えないようにする
+                float moveDistance = Mathf.Min(step, _gunfireRange - _traveledDistances[i]);
 
-            for (int i = 0; i < _laserGlowLines.Length; i++)
-            {
-                _laserGlowLines[i].enabled = true;
-                _laserGlowLines[i].positionCount = 2;
-                _laserGlowLines[i].SetPosition(0, _shootingPoints[i]);
-                _laserGlowLines[i].SetPosition(1, _shootingPoints[i]);
+                Ray ray = new Ray(_currentPositions[i], _directions[i]);
+                RaycastHit[] hits = Physics.RaycastAll(ray, moveDistance);
 
-                _laserCoreLines[i].enabled = true;
-                _laserCoreLines[i].positionCount = 2;
-                _laserCoreLines[i].SetPosition(0, _shootingPoints[i]);
-                _laserCoreLines[i].SetPosition(1, _shootingPoints[i]);
-            }
+                // 衝突したオブジェクトを距離順に並び替える
+                System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
 
-            while (true)
-            {
-                if (_traveledDistances.Any(x => x >= _gunfireRange) || isActive.All(j => j == false)) break;
-
-                for (int i = 0; i < _muzzles.Length; i++)
+                if (isActive[i])
                 {
-                    // 速度がそのまま移動距離になる
-                    float step = _laserSpeed * Time.deltaTime;
-                    // 移動距離が上限を超えないようにする
-                    float moveDistance = Mathf.Min(step, _gunfireRange - _traveledDistances[i]);
-
-                    Ray ray = new Ray(_currentPositions[i], _directions[i]);
-                    RaycastHit[] hits = Physics.RaycastAll(ray, moveDistance);
-
-                    // 衝突したオブジェクトを距離順に並び替える
-                    System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
-
-                    if (isActive[i])
+                    foreach (RaycastHit hit in hits)
                     {
-                        foreach (RaycastHit hit in hits)
+                        // 敵に当たった場合は貫通
+                        if (hit.collider.transform.root.CompareTag("Enemy")) continue;
+
+                        // プレイヤーに当たった場合
+                        if (hit.collider.transform.root.CompareTag("Player"))
                         {
-                            // 敵に当たった場合は貫通
-                            if (hit.collider.transform.root.CompareTag("Enemy")) continue;
-
-                            // プレイヤーに当たった場合
-                            if (hit.collider.transform.root.CompareTag("Player"))
-                            {
-                                IDamageable damageable = hit.collider.GetComponentInParent<IDamageable>();
-                                if (damageable != null) damageable.TakeDamage(CalculateDamage(_firstShotMultiplier), DamageType.EnergyDamage);
-                            }
-
-                            // 敵以外に当たったらレーザーを停止
-                            isActive[i] = false;
-                            _laserGlowLines[i].enabled = false;
-                            _laserCoreLines[i].enabled = false;
-
-                            break;
+                            IDamageable damageable = hit.collider.GetComponentInParent<IDamageable>();
+                            if (damageable != null) damageable.TakeDamage(CalculateDamage(_firstShotMultiplier), DamageType.EnergyDamage);
                         }
+
+                        // 敵以外に当たったらレーザーを停止
+                        isActive[i] = false;
+                        _laserGlowLines[i].enabled = false;
+                        _laserCoreLines[i].enabled = false;
+
+                        break;
                     }
-
-                    // 発射方角に対して打ったレイの移動量を加算
-                    _currentPositions[i] += _directions[i] * moveDistance;
-                    _traveledDistances[i] += moveDistance;
-
-                    // グラフィックに反映する
-                    if (isActive[i]) UpdateLaserPosition(i, _shootingPoints[i], _currentPositions[i], _directions[i], _traveledDistances[i]);
                 }
 
-                yield return null;
+                // 発射方角に対して打ったレイの移動量を加算
+                _currentPositions[i] += _directions[i] * moveDistance;
+                _traveledDistances[i] += moveDistance;
+
+                // グラフィックに反映する
+                if (isActive[i]) UpdateLaserPosition(i, _shootingPoints[i], _currentPositions[i], _directions[i], _traveledDistances[i]);
             }
 
-            // レーザーを非表示にする
-            HideLaser();
-
-            // クールタイム開始
-            _startCooldown = true;
+            yield return null;
         }
+
+        // レーザーを非表示にする
+        HideLaser();
+
+        // クールタイム開始
+        _startCooldown = true;
     }
 
     /// <summary>
@@ -407,8 +407,6 @@ public class TurretController : MonoBehaviour, IDamageable
     /// </summary>
     private void UpdateLaserPosition(int index, Vector3 origin, Vector3 currentPosition, Vector3 direction, float traveledDistance)
     {
-        if (_bossController.Bossdefeated) return;
-
         // レーザーの後端位置
         Vector3 startPosition = currentPosition - direction * traveledDistance;
 
@@ -550,20 +548,10 @@ public class TurretController : MonoBehaviour, IDamageable
     // タレットの復活処理
     public IEnumerator ReGenerateTurret(TurretType turretType, SliderType energySliderType)
     {
-        float turretReGenerateTimer = 0;
-
-        // typeでインデックスを指定する
-        // 破壊されたタレット別でタイマーを走らせる
-        while (turretReGenerateTimer < _turretReGenerationDelay)
-        {
-            turretReGenerateTimer += Time.deltaTime;
-            yield return null;
-        }
-
-        // クールタイムを切ったら TurretController側にある生成用コルーチンを実行する
+        yield return new WaitForSeconds(_turretReGenerationDelay);
 
         if (_generateTurretAsync != null) StopCoroutine(_generateTurretAsync);
-            _generateTurretAsync = _gameController.StartCoroutine(GenerateTurretAsync());
+        _generateTurretAsync = _gameController.StartCoroutine(GenerateTurretAsync());
     }
 
     //=================================== アニメーション処理 =====================================
@@ -644,5 +632,28 @@ public class TurretController : MonoBehaviour, IDamageable
     public void TurretSetFalse()
     {
         this.gameObject.SetActive(false);
+    }
+
+    //=================================== システム停止処理 =====================================
+    private void StopTurret()
+    {
+        // コルーチンをすべて停止
+        StopAllCoroutines();
+
+        // レーザーを非表示
+        HideLaser();
+
+        // 警告レーザーを非表示
+        foreach (var laser in _laserWarnings)
+        {
+            laser.enabled = false;
+        }
+
+        // 動作フラグをOFF
+        _readyToFire = false;
+        _startCooldown = false;
+
+        // スライダーを非表示
+        _turretSlider.gameObject.SetActive(false);
     }
 }
