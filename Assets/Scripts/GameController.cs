@@ -180,7 +180,7 @@ public class GameController : LoadingController
         float start = Mathf.Clamp01((float)beforeValue / maxValue);
         float target = Mathf.Clamp01((float)currentValue / maxValue);
 
-        bool isDamage = isHpSlider && currentValue < beforeValue;
+        bool isDamage = currentValue < beforeValue;
 
         // HP回復時は遅延ゲージも一緒に動かす
         if (isHpSlider && !isDamage)
@@ -199,7 +199,7 @@ public class GameController : LoadingController
             slider.value = value;
 
             // ダメージ以外は遅延ゲージも同時に更新
-            if (isHpSlider && !isDamage)
+            if (!isDamage)
             {
                 _trailSliders[index].value = value;
             }
@@ -215,10 +215,13 @@ public class GameController : LoadingController
             switch (sliderTyp)
             {
                 case SliderType.PlayerHpSlider:
-                case SliderType.BossHpSlider:
                 case SliderType.TurretLeftHpSlider:
                 case SliderType.TurretRightHpSlider:
                     valueText.SetText("{0:0}", value * maxValue);
+                    break;
+
+                case SliderType.BossHpSlider:
+                    valueText.SetText("");
                     break;
 
                 default:

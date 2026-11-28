@@ -67,6 +67,8 @@ public class PlayerController : MonoBehaviour, IDamageable
     private int _shotCost = 2;
 
     [SerializeField] private float _upperOffset, _rightOffset;
+    private float _horizontal;
+    private float _vertical;
     private float _gunfireRange = 500f;
     private float _shootingCooldown = 0.1f;// 銃撃のクールダウン
     private float _comboTimeout = 1.0f;    // コンボ受付の猶予時間
@@ -75,7 +77,8 @@ public class PlayerController : MonoBehaviour, IDamageable
     private float _shootingTimer;
     private float _comboTimer;
 
-    private float _playerRushSpeed = 160f;
+    
+    private float _playerRushSpeed = 3f;
     private float _playerRotateSpeed = 10.0f;
     private float _playerSpeed = 1.5f;
 
@@ -85,6 +88,8 @@ public class PlayerController : MonoBehaviour, IDamageable
     private bool _startAttackTimer = false;
     private bool _avoidance = false;
     private bool _isAttacking = false;
+    private Vector3 _playerRushVelocity;
+    private Vector3 _moveDirection;
 
     private void Awake()
     {
@@ -297,34 +302,59 @@ public class PlayerController : MonoBehaviour, IDamageable
     // 移動制御
     private void MovePlayer()
     {
-        float horizontal = Input.GetAxisRaw("Horizontal");
-        float vertical = Input.GetAxisRaw("Vertical");
-        Vector3 moveDirection = new Vector3(horizontal, 0f, vertical).normalized;
-
-        Avoidance(moveDirection);
-
-        if (!_isAttacking && !_gunFireMode && !_defeated && !_avoidance)
+        if (!_gunFireMode && !_defeated)
         {
-            float t = Time.deltaTime;
-
-            // 移動
-            _playerRb.linearVelocity = new Vector3(
-                moveDirection.x * _playerSpeed * (1 + Buffs[(int)BuffType.SpeedUp]),
-                _playerRb.linearVelocity.y,
-                moveDirection.z * _playerSpeed * (1 + Buffs[(int)BuffType.SpeedUp])
-                );
-
-            // 回転
-            if (moveDirection != Vector3.zero)
+            if (!_isAttacking && !_avoidance)
             {
-                // 向きたい方向への回転を作る（LookRotatio）
-                Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
-                // 滑らかに回転させる（Slerp）
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, t * _playerRotateSpeed);
+                float t = Time.deltaTime;
+
+                _horizontal = Input.GetAxisRaw("Horizontal");
+                _vertical = Input.GetAxisRaw("Vertical");
+                _moveDirection = new Vector3(_horizontal, 0f, _vertical).normalized;
+
+                // 回転
+                if (_moveDirection != Vector3.zero)
+                {
+                    // 向きたい方向への回転を作る（LookRotatio）
+                    Quaternion targetRotation = Quaternion.LookRotation(_moveDirection);
+                    // 滑らかに回転させる（Slerp）
+                    transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, t * _playerRotateSpeed);
+                }
+
+                int animValue = (Mathf.Abs((int)_horizontal) > 0 || Mathf.Abs((int)_vertical) > 0) ? 1 : 0;
+                _playerAnimator.SetInteger("Run", animValue);
             }
 
-            int animValue = (Mathf.Abs((int)horizontal) > 0 || Mathf.Abs((int)vertical) > 0) ? 1 : 0;
-            _playerAnimator.SetInteger("Run", animValue);
+            Vector3 moveVelocity = Vector3.zero;
+            Vector3 rushVelocity = Vector3.zero;
+
+            // 回避処理
+            rushVelocity = Avoidance(_moveDirection);
+
+            // 移動速度を算出
+            float moveSpeed = _playerSpeed * (1f + Buffs[(int)BuffType.SpeedUp]);
+
+            // 回避時は移動速度を差し引く
+            if (_moveDirection != Vector3.zero) rushVelocity = _playerRushVelocity / 3;
+            
+            moveVelocity = _moveDirection * moveSpeed;
+
+            if (!_isAttacking)
+            {
+                // 回避速度と通常移動速度を合算
+                _playerRb.linearVelocity = new Vector3(
+                    moveVelocity.x + rushVelocity.x,
+                    _playerRb.linearVelocity.y,
+                    moveVelocity.z + rushVelocity.z
+                    );
+            }
+
+            // 回避速度を徐々に落とす
+            _playerRushVelocity = Vector3.MoveTowards(
+                _playerRushVelocity,
+                Vector3.zero,
+                4 * Time.deltaTime
+                );
         }
     }
 
@@ -335,15 +365,9 @@ public class PlayerController : MonoBehaviour, IDamageable
         _playerAnimator.SetInteger("Run", 0);
     }
 
-    // 移動速度を割る
-    private void DivideMovementSpeed()
-    {
-        _playerRb.linearVelocity = new Vector3(_playerRb.linearVelocity.x / 4, _playerRb.linearVelocity.y, _playerRb.linearVelocity.z / 4);
-    }
-
     // 回避処理
     // NOTE:回避後は時間外でなければ、次の攻撃につなげられる
-    private void Avoidance(Vector3 direction)
+    private Vector3 Avoidance(Vector3 direction)
     {
         // 回避
         if (Input.GetKeyDown(KeyCode.LeftShift) ||
@@ -390,14 +414,13 @@ public class PlayerController : MonoBehaviour, IDamageable
                     // 移動方向に対して瞬時に回転
                     transform.rotation = Quaternion.LookRotation(direction);
                 }
+                else
+                {
+                    direction = transform.forward;
+                }
 
-                // 移動速度を割る
-                DivideMovementSpeed();
-                Debug.Log(_playerRb.linearVelocity.magnitude);
-
-                // 自身の前方向へ突進
-                _playerRb.AddForce(transform.forward * _playerRushSpeed);
-                Debug.Log("回避直後：" + _playerRb.linearVelocity);
+                // 自身の前方方向へ突進
+                _playerRushVelocity = direction.normalized * _playerRushSpeed;
 
                 //プレイヤーのスタミナ量をUIに反映する
                 if (_updatePlayerStamina != null) StopCoroutine(_updatePlayerStamina);
@@ -408,6 +431,8 @@ public class PlayerController : MonoBehaviour, IDamageable
                 _regenerateStamina = StartCoroutine(RegenerateStamina());
             }
         }
+
+        return _playerRushVelocity;
     }
 
     // スタミナ自動回復

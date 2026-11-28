@@ -15,7 +15,7 @@ MonoBehaviour:
   _atkBuffAmount: 0.2
   _defBuffAmount: 0.2
   _critDamageBuffAmount: 0.2
-  _speedUpBuffAmount: 0.15
+  _speedUpBuffAmount: 0.12
   _atkBuffDuration: 30
   _defBuffDuration: 30
   _critDamageBuffDuration: 30
